@@ -1,0 +1,3 @@
+URI	Filename	FixedModifications	VariableModifications	Proteomics Data Acquisition Method	Label	PrecursorMassTolerance	PrecursorMassToleranceUnit	FragmentMassTolerance	FragmentMassToleranceUnit	DissociationMethod	Enzyme
+02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_2xIT_2xHCD_R1.raw	02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_2xIT_2xHCD_R1.raw	Carbamidomethyl (C)	Acetyl (Protein N-term),Oxidation (M),Phospho (Y)	Data-Dependent Acquisition	label free sample	20	ppm	0.03	Da	HCD	Trypsin
+02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_3xHCD_R1.raw	02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_3xHCD_R1.raw	Carbamidomethyl (C)	Acetyl (Protein N-term),Oxidation (M),Phospho (Y)	Data-Dependent Acquisition	label free sample	20	ppm	0.03	Da	HCD	Trypsin
