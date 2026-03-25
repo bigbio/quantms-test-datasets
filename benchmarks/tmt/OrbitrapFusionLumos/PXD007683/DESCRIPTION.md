@@ -30,5 +30,10 @@ TMT detected statistically significant changes **three times more often** than L
 - Missing values: Completeness compared to LFQ approach
 - Comparison with LFQ approach (see lfq/OrbitrapFusionLumos/PXD007683/)
 
+### Search Database
+- **File**: `databases/PXD007683_UP000005640_UP000002311_reviewed.fasta` (in main databases directory)
+- **Contents**: Human (UP000005640) + Yeast (UP000002311) Swiss-Prot reviewed
+- **Species**: Homo sapiens + Saccharomyces cerevisiae
+
 ### Reference
 O'Connell JD, Paulo JA, O'Brien JJ, Gygi SP. Proteome-Wide Evaluation of Two Common Protein Quantification Methods. J Proteome Res. 2018;17(5):1934-1942. doi:10.1021/acs.jproteome.8b00016

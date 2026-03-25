@@ -1,0 +1,13 @@
+URI	Filename	FixedModifications	VariableModifications	Proteomics Data Acquisition Method	Label	PrecursorMassTolerance	PrecursorMassToleranceUnit	FragmentMassTolerance	FragmentMassToleranceUnit	DissociationMethod	Enzyme
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10855.raw	xb10855.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10856.raw	xb10856.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10857.raw	xb10857.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10858.raw	xb10858.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10859.raw	xb10859.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10860.raw	xb10860.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10861.raw	xb10861.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10862.raw	xb10862.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10863.raw	xb10863.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10864.raw	xb10864.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10865.raw	xb10865.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin
+ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2024/10/PXD054559/xb10866.raw	xb10866.raw	Carbamidomethyl (C),TMTpro (N-term),TMTpro (K)	Oxidation (M)	Data-Dependent Acquisition	tmt18plex	10	ppm	0.03	Da	HCD	Trypsin

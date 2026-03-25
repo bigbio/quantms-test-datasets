@@ -49,6 +49,13 @@ DIA data intended for analysis with DIA-NN, Spectronaut, or other DIA tools. Sea
 - Missing value rates at single-cell loading
 - FAIMS impact on sensitivity and specificity
 
+### Search Database
+- **File**: `databases/ProteoBenchFASTA_DDAQuantification_noecoli.fasta` (in main databases directory)
+- **Source**: [ProteoBenchFASTA_MixedSpecies_HY.zip](https://proteobench.cubimed.rub.de/fasta/ProteoBenchFASTA_MixedSpecies_HY.zip)
+- **Contents**: Human + Yeast + Contaminants = 27,488 proteins (no E.coli)
+- **Contaminant prefix**: `Cont_` in accession (e.g., `sp|Cont_P00761|TRYP_PIG`)
+- **Note**: If using MaxQuant, disable built-in contaminants — this FASTA already includes them.
+
 ### Note
 This dataset uses only 2 species (Human HeLa + Yeast), unlike the standard 3-species ProteoBench benchmarks. The ratios are expressed as absolute amounts (pg) rather than fold changes.
 

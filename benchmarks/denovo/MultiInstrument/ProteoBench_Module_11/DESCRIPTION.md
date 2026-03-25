@@ -48,6 +48,11 @@ PSMs filtered at 1% FDR. Balanced dataset assembled by Noble et al., 2024, selec
 - Handling of missing fragments and noise
 - Comparison across de novo tools (Casanovo, Novor, pNovo, etc.)
 
+### Search Database
+- **No single database**: Each species uses its own reference proteome from UniProt.
+- De novo sequencing does not require a FASTA database — sequences are predicted directly from spectra.
+- For validation/benchmarking, species-specific databases from each PXD project should be used.
+
 ### Note
 This is a **de novo sequencing** benchmark, fundamentally different from the quantification modules. The SDRF uses placeholder raw file names since the benchmark operates on pre-filtered PSM lists rather than raw files directly. The actual raw files should be downloaded from the individual PXD accessions listed above.
 

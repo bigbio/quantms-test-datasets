@@ -29,5 +29,10 @@ DIA analysis performed. Refer to the manuscript for detailed data processing des
 ### Note
 This dataset was submitted as a zip file (PXD063291.zip). Extract before use. Raw files follow naming convention: 20221028_FL_Lu_SV_Set12_{A/B}{1-6}.raw
 
+### Search Database
+- **File**: `databases/UP000005640_9606.fasta` (in main databases directory)
+- **Contents**: Human (UP000005640) Swiss-Prot reviewed
+- **Species**: Homo sapiens
+
 ### Reference
 Lamoliatte F, Virdee S. MRC Protein Phosphorylation and Ubiquitylation Unit, University of Dundee. No publication yet (submitted 2025-04-24).

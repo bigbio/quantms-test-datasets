@@ -26,5 +26,10 @@ MS/MS data were searched with Mascot (v2.4.2) against a yeast UniProtKB database
 - Linearity: Measured abundance vs true spiked amount across concentrations
 - Lower limit of quantification (LLOQ) assessment
 
+### Search Database
+- **File**: `databases/PXD001819_uniprot_yeast_ups.fasta` (in main databases directory)
+- **Contents**: Yeast (S. cerevisiae) + Human UPS1 standard (48 proteins)
+- **Species**: Saccharomyces cerevisiae + Homo sapiens (UPS1 spike-in)
+
 ### Reference
 Ramus C, Hovasse A, Marcellin M, et al. Spiked proteomic standard dataset for testing label-free quantitative software and statistical methods. Data Brief. 2015;6:286-294. doi:10.1016/j.dib.2015.11.063

@@ -36,5 +36,12 @@ Only the **Q Exactive HF** instrument files, **Alpha sample series** (first batc
 - Accuracy: Measured fold changes vs expected fold changes
 - Precision: Coefficient of variation across replicates
 
+### Search Database
+- **File**: `databases/ProteoBenchFASTA_MixedSpecies_HYE.fasta` (in main databases directory)
+- **Source**: [ProteoBenchFASTA_MixedSpecies_HYE.zip](https://proteobench.cubimed.rub.de/fasta/ProteoBenchFASTA_MixedSpecies_HYE.zip)
+- **Contents**: Human (20,537) + Yeast (6,722) + E.coli (4,401) + Contaminants (381) = 31,889 proteins
+- **Contaminant prefix**: `Cont_` in accession (e.g., `sp|Cont_P00761|TRYP_PIG`)
+- **Note**: If using MaxQuant, disable built-in contaminants — this FASTA already includes them.
+
 ### Reference
 Van Puyvelde B, Daled S, Willems S, et al. A comprehensive LFQ benchmark dataset on modern day acquisition strategies in proteomics. Sci Data. 2022;9(1):126. doi:10.1038/s41597-022-01216-6

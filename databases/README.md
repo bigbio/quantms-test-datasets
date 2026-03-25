@@ -2,6 +2,40 @@
 
 This directory contains the databases used in the project. The databases are stored in fasta files with extensions fasta or fa.
 
+### ProteoBench Benchmark Databases
+
+Official curated FASTA files from the [ProteoBench](https://proteobench.cubimed.rub.de/) project, used for the benchmark datasets in `benchmarks/`. Contaminant proteins use a `Cont_` prefix in the accession (e.g., `sp|Cont_P00761|TRYP_PIG`).
+
+| File | Download | Contents | Proteins | Used By |
+|------|----------|----------|----------|---------|
+| `ProteoBenchFASTA_MixedSpecies_HYE.fasta` | [HYE.zip](https://proteobench.cubimed.rub.de/fasta/ProteoBenchFASTA_MixedSpecies_HYE.zip) | Human (20,537) + Yeast (6,722) + E.coli (4,401) + Contaminants (381) | 31,889 | Modules 2, 3, 5, 7, 8, 10 |
+| `ProteoBenchFASTA_DDAQuantification_noecoli.fasta` | [HY.zip](https://proteobench.cubimed.rub.de/fasta/ProteoBenchFASTA_MixedSpecies_HY.zip) | Human + Yeast + Contaminants | 27,488 | Module 9 (single-cell) |
+
+A copy named `database.fasta` is placed in each benchmark project directory under `benchmarks/`.
+
+**Note for MaxQuant users**: Disable the built-in contaminants file — the ProteoBench FASTA already includes curated contaminants with `Cont_` prefix.
+
+### UniProt Individual Proteomes
+
+Swiss-Prot reviewed canonical sequences downloaded from [UniProt](https://www.uniprot.org/) (2026-03-24):
+
+| File | Organism | UniProt Proteome | Taxonomy | Proteins |
+|------|----------|-----------------|----------|----------|
+| `human_sp.fasta` | Homo sapiens | UP000005640 | 9606 | 20,416 |
+| `yeast_sp.fasta` | Saccharomyces cerevisiae (S288c) | UP000002311 | 559292 | 6,066 |
+| `ecoli_sp.fasta` | Escherichia coli (K12) | UP000000625 | 83333 | 4,403 |
+
+### Project-Specific Databases
+
+| File | Species | Used By |
+|------|---------|---------|
+| `PXD001819_uniprot_yeast_ups.fasta` | Yeast + UPS1 (48 human proteins) | PXD001819 (LFQ spike-in) |
+| `PXD007683_UP000005640_UP000002311_reviewed.fasta` | Human + Yeast | PXD007683 (LFQ/TMT comparison) |
+| `PXD009449_UP000005640_synthesized.fasta` | Human (synthetic peptides) | PXD009449 (PTM characterization) |
+| `PXD019643_UP000005640_.fasta` | Human | PXD019643 (HLA ligand atlas) |
+| `PXD026600_REF_EColi_K12_UPS1_combined.fasta` | E.coli + UPS1 | PXD026600 (DIA benchmark) |
+| `UP000005640_9606.fasta` | Human | General human proteome |
+
 ### Contaminants databases
 
 - [contaminants.fasta](contaminants.fasta): A database of common contaminants in proteomics experiments. This database is used to filter out common contaminants from the search results. It is the merge of crap-202105.fasta and contaminants-mq-202105.fasta from the [MaxQuant](https://www.maxquant.org/) software.

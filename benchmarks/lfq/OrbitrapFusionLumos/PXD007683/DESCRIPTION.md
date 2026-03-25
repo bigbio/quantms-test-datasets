@@ -27,5 +27,10 @@ Searched with MaxQuant (v1.5.8.3) against combined yeast and human database. Pre
 - Missing values: Completeness of quantification matrix
 - Comparison with TMT approach (see tmt/OrbitrapFusionLumos/PXD007683/)
 
+### Search Database
+- **File**: `databases/PXD007683_UP000005640_UP000002311_reviewed.fasta` (in main databases directory)
+- **Contents**: Human (UP000005640) + Yeast (UP000002311) Swiss-Prot reviewed
+- **Species**: Homo sapiens + Saccharomyces cerevisiae
+
 ### Reference
 O'Connell JD, Paulo JA, O'Brien JJ, Gygi SP. Proteome-Wide Evaluation of Two Common Protein Quantification Methods. J Proteome Res. 2018;17(5):1934-1942. doi:10.1021/acs.jproteome.8b00016

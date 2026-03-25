@@ -24,3 +24,8 @@ DIA data can be analyzed with DIA-NN, Spectronaut, OpenSWATH, or other DIA analy
 - False discovery rate: E. coli background proteins incorrectly called differential
 - DIA workflow comparison: Performance across different DIA analysis tools (DIA-NN, Spectronaut, etc.)
 - Dynamic range assessment across spike-in levels
+
+### Search Database
+- **File**: `databases/PXD026600_REF_EColi_K12_UPS1_combined.fasta` (in main databases directory)
+- **Contents**: E.coli K12 (UP000000625) + Human UPS1 standard
+- **Species**: Escherichia coli + Homo sapiens (UPS1 spike-in)

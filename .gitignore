@@ -5,4 +5,7 @@
 .github/instructions/codacy.instructions.md
 benchmarks/download_benchmarks.sh
 
+.DS_Store
+*.log 
+
 

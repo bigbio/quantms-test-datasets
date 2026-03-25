@@ -29,5 +29,10 @@ MS/MS data identified using MaxQuant v1.5.3.30 against a database of concatenate
 - Retention time prediction for phosphopeptides
 - Sensitivity across different fragmentation strategies
 
+### Search Database
+- **File**: `databases/PXD009449_UP000005640_synthesized.fasta` (in main databases directory)
+- **Contents**: Human (UP000005640) + synthetic peptide sequences
+- **Species**: Homo sapiens (synthetic peptides)
+
 ### Reference
 Zolg DP, Wilhelm M, Schmidt T, et al. ProteomeTools: Systematic characterization of 21 post-translational protein modifications by LC-MS/MS using synthetic peptides. Mol Cell Proteomics. 2018. doi:10.1074/mcp.tir118.000783
