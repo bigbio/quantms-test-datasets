@@ -30,16 +30,21 @@ processing protocol and exact raw-file inventory.
 Datasets included for additional coverage (instrument breadth, PTM, spike-in,
 single-organism reference) not yet aligned to a ProteoBench module.
 
-| PRIDE accession | Instrument | Acquisition | Folder |
-|-----------------|------------|-------------|--------|
+| Accession | Instrument | Acquisition | Folder |
+|-----------|------------|-------------|--------|
 | PXD001819 | LTQ Orbitrap Velos | LFQ DDA (yeast + UPS1 spike-in) | [lfq/LTQOrbitrapVelos/PXD001819/](lfq/LTQOrbitrapVelos/PXD001819/) |
 | PXD007683 | Orbitrap Fusion Lumos | LFQ DDA (human + yeast) | [lfq/OrbitrapFusionLumos/PXD007683/](lfq/OrbitrapFusionLumos/PXD007683/) |
 | PXD007683 | Orbitrap Fusion Lumos | TMT (same study) | [tmt/OrbitrapFusionLumos/PXD007683/](tmt/OrbitrapFusionLumos/PXD007683/) |
 | PXD009449 | Orbitrap Fusion Lumos | LFQ DDA (phospho/PTM characterization) | [lfq/OrbitrapFusionLumos/PXD009449/](lfq/OrbitrapFusionLumos/PXD009449/) |
 | PXD026600 | Orbitrap Fusion | DIA (E.coli + UPS1) | [dia/OrbitrapFusion/PXD026600/](dia/OrbitrapFusion/PXD026600/) |
+| PXD039578 | Q Exactive HF | DIA SILAC (plexDIA) | [dia/QExactiveHF/PXD039578/](dia/QExactiveHF/PXD039578/) |
 | PXD046453 | Orbitrap Astral | LFQ DDA (HeLa, Astral DDA vs DIA comparison) | [lfq/OrbitrapAstral/PXD046453/](lfq/OrbitrapAstral/PXD046453/) |
 | PXD054559 | Orbitrap Eclipse | TMT (human + contaminants) | [tmt/OrbitrapEclipse/PXD054559/](tmt/OrbitrapEclipse/PXD054559/) |
 | PXD063291 | Orbitrap Fusion Lumos | DIA (HEK293 E3 activity profiling) | [dia/OrbitrapFusionLumos/PXD063291/](dia/OrbitrapFusionLumos/PXD063291/) |
+| PXD069249 | Q Exactive HF | LFQ DDA | [lfq/QExactiveHF/PXD069249/](lfq/QExactiveHF/PXD069249/) |
+| PXD071075 | Orbitrap Eclipse | DIA (single-cell, 2,310 samples) | [dia/OrbitrapEclipse/PXD071075/](dia/OrbitrapEclipse/PXD071075/) |
+| PXD071205 | Orbitrap Astral | DIA (HYE Condition A/B) | [dia/OrbitrapAstral/PXD071205/](dia/OrbitrapAstral/PXD071205/) |
+| MSV000088302 | Q Exactive | DIA mTRAQ 3-plex (MassIVE) | [dia/QExactive/MSV000088302/](dia/QExactive/MSV000088302/) |
 
 ## Folder layout
 
@@ -47,16 +52,19 @@ single-organism reference) not yet aligned to a ProteoBench module.
 benchmarks/
 ├── denovo/MultiInstrument/ProteoBench_Module_11/
 ├── dia/
-│   ├── OrbitrapAstral/{ProteoBench_Module_7, ProteoBench_Module_9}/
+│   ├── OrbitrapAstral/{PXD071205, ProteoBench_Module_7, ProteoBench_Module_9}/
+│   ├── OrbitrapEclipse/PXD071075/
 │   ├── OrbitrapFusion/PXD026600/
 │   ├── OrbitrapFusionLumos/PXD063291/
+│   ├── QExactive/MSV000088302/
+│   ├── QExactiveHF/PXD039578/
 │   ├── ZenoTOF8600/ProteoBench_Module_10/
 │   └── timsTOFSCP/ProteoBench_Module_5/
 ├── lfq/
 │   ├── LTQOrbitrapVelos/PXD001819/
 │   ├── OrbitrapAstral/{PXD046453, ProteoBench_Module_8}/
 │   ├── OrbitrapFusionLumos/{PXD007683, PXD009449}/
-│   └── QExactiveHF/{ProteoBench_Module_2, ProteoBench_Module_3}/
+│   └── QExactiveHF/{PXD069249, ProteoBench_Module_2, ProteoBench_Module_3}/
 ├── tmt/
 │   ├── OrbitrapEclipse/PXD054559/
 │   └── OrbitrapFusionLumos/PXD007683/
