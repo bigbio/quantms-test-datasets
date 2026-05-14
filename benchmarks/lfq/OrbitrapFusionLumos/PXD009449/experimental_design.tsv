@@ -1,7 +1,0 @@
-Fraction_Group	Fraction	Spectra_Filepath	Label	Sample
-1	1	02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_2xIT_2xHCD_R1.raw	1	1
-2	1	02330a_BA4_4087_1_PTM_TrainKit_Ymod_Phospho_200fmol_3xHCD_R1.raw	1	2
-
-Sample	MSstats_Condition	MSstats_BioReplicate
-1	Control	1
-2	Control	2
