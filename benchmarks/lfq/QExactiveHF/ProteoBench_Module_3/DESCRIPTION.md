@@ -18,7 +18,7 @@ Same as Module 2. No pre-processed results provided.
 ## Benchmark Description
 
 ### Relationship to Module 2
-This module uses **the same raw data files** as Module 2 (PXD028735_ProteoBench_Module_2). The difference is in the analysis level:
+This module uses **the same raw data files** as Module 2 (PXD028735, see `../ProteoBench_Module_2/`). The difference is in the analysis level:
 - **Module 2**: Ion-level quantification (precursor ions)
 - **Module 3**: Peptidoform-level quantification (peptidoform quantities summarized from precursor ion quantities)
 
