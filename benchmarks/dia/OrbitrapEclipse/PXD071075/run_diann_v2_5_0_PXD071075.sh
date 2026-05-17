@@ -1,0 +1,47 @@
+docker run --rm \
+  -v $(pwd)/raw_data:/data/raw_data \
+  -v $(pwd)/fasta:/data/fasta \
+  -v $(pwd)/output:/data/output \
+  diann:2.5.0 \
+  diann \
+  --dir /data/raw_data \
+  --fasta /data/fasta/UP000005640_9606.fasta \
+  --temp /data/output \
+  --threads 18 \
+  --fasta-search \
+  --cut "K*,R*,!*P" \
+  --fixed-mod Carbamidomethyl,57.021464,C \
+  --var-mod Oxidation,15.994915,M \
+  --mass-acc-ms1 5.0 \
+  --mass-acc 10.0 \
+  --min-pr-mz 400 \
+  --max-pr-mz 800 \
+  --min-fr-mz 200 \
+  --max-fr-mz 1800 \
+  --missed-cleavages 2 \
+  --min-pep-len 7 \
+  --max-pep-len 30 \
+  --min-pr-charge 2 \
+  --max-pr-charge 4 \
+  --var-mods 2 \
+  --predictor \
+  --verbose 3 \
+  --met-excision \
+  --quick-mass-acc \
+  --min-corr 2 \
+  --corr-diff 1 \
+  --time-corr-only \
+  --no-prot-inf \
+  --rt-profiling \
+  --use-quant \
+  --individual-mass-acc \
+  --individual-windows \
+  --window 6 \
+  --pg-level 2 \
+  --no-norm \
+  --matrices \
+  --out /data/output/diann_report.tsv \
+  --qvalue 0.01 \
+  --matrix-qvalue 0.01 \
+  --matrix-spec-q 0.05 \
+  --direct-quant
