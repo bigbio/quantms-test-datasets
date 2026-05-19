@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=pxd071075_scaling_submit
+#SBATCH --output=/hps/nobackup/juan/pride/reanalysis/logs/PXD071075/submit_%j.out
+#SBATCH --error=/hps/nobackup/juan/pride/reanalysis/logs/PXD071075/submit_%j.err
+#SBATCH --partition=standard
+#SBATCH --time=00:30:00
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=1G
+#
+# Submit the PXD071075 cluster-scaling sweep:
+#   - 2 baseline points (DIA-NN direct via run_diann.sh) @ 48 cpu / 300 GB
+#   - 5 sweep points (Nextflow via run_local.sh) @ queueSize in {2,3,7,13,25}
+# Chained sequentially with --dependency=afterok so wall-times are measured
+# against a quiescent cluster.
+#
+# Reads sweep matrix from:
+#   benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv
+#
+# Usage (from the cluster head, after cloning the repo):
+#   ./scripts/run_PXD071075_scaling.sh              # submit
+#   DRY_RUN=1 ./scripts/run_PXD071075_scaling.sh    # preview
+#   sbatch     ./scripts/run_PXD071075_scaling.sh   # also fine - this script
+#                                                   # is small enough to run
+#                                                   # under sbatch itself
+#
+# Knobs (env vars):
+#   REPO_ROOT, RAW_DIR, BASE_RESULTS, BASE_WORK, LOGS_DIR,
+#   NXF_SINGULARITY_CACHEDIR - see defaults below.
+
+set -euo pipefail
+
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+    echo "ERROR: this script needs bash 4+ (current: ${BASH_VERSION:-unknown})." >&2
+    echo "       On macOS, install one via: brew install bash" >&2
+    exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
+# --- Paths (cluster defaults) -------------------------------------------
+RAW_DIR="${RAW_DIR:-/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075}"
+BASE_RESULTS="${BASE_RESULTS:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075}"
+BASE_WORK="${BASE_WORK:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_work/PXD071075}"
+LOGS_DIR="${LOGS_DIR:-/hps/nobackup/juan/pride/reanalysis/logs/PXD071075}"
+NXF_SINGULARITY_CACHEDIR="${NXF_SINGULARITY_CACHEDIR:-/hps/nobackup/juan/pride/reanalysis/singularity}"
+
+SDRF="$REPO_ROOT/benchmarks/dia/OrbitrapEclipse/PXD071075/PXD071075.sdrf.tsv"
+FASTA="$REPO_ROOT/benchmarks/dia/OrbitrapEclipse/PXD071075/UP000005640_9606.fasta"
+MATRIX="$REPO_ROOT/benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv"
+
+DRY_RUN="${DRY_RUN:-0}"
+
+# --- Validate ------------------------------------------------------------
+[ -f "$SDRF" ]   || { echo "ERROR: SDRF not found: $SDRF" >&2; exit 1; }
+[ -f "$FASTA" ]  || { echo "ERROR: FASTA not found: $FASTA" >&2; exit 1; }
+[ -f "$MATRIX" ] || { echo "ERROR: sweep matrix not found: $MATRIX" >&2; exit 1; }
+[ -d "$RAW_DIR" ]|| { echo "ERROR: raw dir not found: $RAW_DIR" >&2; exit 1; }
+[ -x "$SCRIPT_DIR/run_local.sh" ] || chmod +x "$SCRIPT_DIR/run_local.sh"
+[ -x "$SCRIPT_DIR/run_diann.sh" ] || chmod +x "$SCRIPT_DIR/run_diann.sh"
+
+if [ "$DRY_RUN" != "1" ]; then
+    command -v sbatch >/dev/null 2>&1 || { echo "ERROR: sbatch not in PATH (use DRY_RUN=1 off-cluster)" >&2; exit 1; }
+fi
+
+mkdir -p "$BASE_RESULTS" "$BASE_WORK" "$LOGS_DIR" "$NXF_SINGULARITY_CACHEDIR"
+
+# --- Read sweep matrix ---------------------------------------------------
+# Columns: point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task
+ROWS=()
+while IFS=$'\t' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task; do
+    # Skip header
+    [ "$point_id" = "point_id" ] && continue
+    [ -z "$point_id" ] && continue
+    ROWS+=("$point_id|$version|$run_kind|$cluster_cores|$queue_size|$per_job_mem_gb|$head_mem_gb|$cpus_per_task")
+done < "$MATRIX"
+
+if [ "${#ROWS[@]}" -eq 0 ]; then
+    echo "ERROR: sweep matrix has no data rows: $MATRIX" >&2; exit 1
+fi
+
+echo "Repo root      : $REPO_ROOT"
+echo "Raw dir        : $RAW_DIR"
+echo "SDRF           : $SDRF"
+echo "FASTA          : $FASTA"
+echo "Base results   : $BASE_RESULTS"
+echo "Base work      : $BASE_WORK"
+echo "Logs dir       : $LOGS_DIR"
+echo "Sweep matrix   : $MATRIX (${#ROWS[@]} points)"
+echo "Dry-run        : $DRY_RUN"
+echo
+
+# --- Plan ----------------------------------------------------------------
+echo "Planning ${#ROWS[@]} sbatch submissions:"
+for row in "${ROWS[@]}"; do
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
+    printf "  - %-30s v%-6s kind=%-8s cores=%-3s queue=%-3s mem=%sGB cpus=%s\n" \
+        "$point_id" "$version" "$run_kind" "$cluster_cores" "$queue_size" \
+        "$([ "$per_job_mem_gb" = "0" ] && echo "$head_mem_gb" || echo "$per_job_mem_gb")" \
+        "$cpus_per_task"
+done
+echo
+
+# --- Per-row sbatch builder ---------------------------------------------
+write_baseline_metadata() {
+    # Submitter writes run_metadata.json for baseline points so the aggregator
+    # has a uniform input shape (run_local.sh writes its own for sweep points).
+    local results_dir="$1" point_id="$2" version="$3" cluster_cores="$4"
+    mkdir -p "$results_dir"
+    cat >"$results_dir/run_metadata.json" <<EOF
+{
+  "dataset": "PXD071075",
+  "diann_version": "$version",
+  "sweep_cores": null,
+  "queue_size": null,
+  "cluster_cores_requested": $cluster_cores,
+  "run_kind": "baseline",
+  "point_id": "$point_id",
+  "submitted_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+}
+
+# Build sbatch invocation for one row. Echoes the full command on stdout.
+# In dry-run mode the caller just prints it; otherwise it's executed.
+build_cmd() {
+    local row="$1" idx="$2" prev_jid="$3"
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
+
+    local results_dir="$BASE_RESULTS/$point_id"
+    local work_dir="$BASE_WORK/$point_id"
+    local log_dir="$LOGS_DIR/$point_id"
+    mkdir -p "$results_dir" "$log_dir"
+
+    local out_file="$log_dir/slurm_%j.out"
+    local err_file="$log_dir/slurm_%j.err"
+
+    local sbatch_args=( --parsable
+        --job-name="pxd071075_${point_id}"
+        --output="$out_file"
+        --error="$err_file"
+    )
+    [ -n "$prev_jid" ] && sbatch_args+=( "--dependency=afterok:$prev_jid" )
+
+    if [ "$run_kind" = "baseline" ]; then
+        write_baseline_metadata "$results_dir" "$point_id" "$version" "$cluster_cores"
+        sbatch_args+=(
+            --mem="${per_job_mem_gb}G"
+            --cpus-per-task="$cpus_per_task"
+            --time=72:00:00
+        )
+        echo "sbatch ${sbatch_args[*]} $SCRIPT_DIR/run_diann.sh $RAW_DIR $FASTA $results_dir $version"
+    else
+        # Sweep: pass QUEUE_SIZE + SWEEP_CORES via --export so run_local.sh
+        # picks them up (it writes run_metadata.json + queue_size.config).
+        sbatch_args+=(
+            --mem="${head_mem_gb}G"
+            --cpus-per-task="$cpus_per_task"
+            --time=168:00:00
+            --export="ALL,QUEUE_SIZE=$queue_size,SWEEP_CORES=$cluster_cores"
+        )
+        echo "sbatch ${sbatch_args[*]} $SCRIPT_DIR/run_local.sh $SDRF $RAW_DIR $FASTA $work_dir $results_dir $version"
+    fi
+}
+
+# --- Submit (or dry-run) ------------------------------------------------
+SUBMITTED_IDS=()
+idx=0
+prev_jid=""
+for row in "${ROWS[@]}"; do
+    cmd=$(build_cmd "$row" "$idx" "$prev_jid")
+    if [ "$DRY_RUN" = "1" ]; then
+        printf '[dry-run idx=%d%s] %s\n' "$idx" "${prev_jid:+ depends-on=$prev_jid}" "$cmd"
+        prev_jid="DRY$idx"
+    else
+        jid=$(eval "$cmd")
+        SUBMITTED_IDS+=("$jid")
+        IFS='|' read -r point_id _ <<<"$row"
+        printf '  submitted %-30s job %s%s\n' "$point_id" "$jid" "${prev_jid:+ (after $prev_jid)}"
+        prev_jid="$jid"
+    fi
+    idx=$((idx + 1))
+done
+
+echo
+if [ "$DRY_RUN" = "1" ]; then
+    echo "Dry-run complete (no jobs submitted)."
+else
+    echo "Submitted ${#SUBMITTED_IDS[@]} jobs. Watch with: squeue -u \"\$USER\""
+    echo "Per-point logs:     $LOGS_DIR/<point_id>/slurm_<jobid>.{out,err}"
+    echo "Per-point results:  $BASE_RESULTS/<point_id>/"
+    echo "Aggregate after:    $SCRIPT_DIR/collect_PXD071075_scaling.py"
+fi
