@@ -23,9 +23,9 @@
 #
 # Tunables (env vars):
 #   THREADS              cores for DIA-NN                          (default 48 = SBATCH cap)
-#   CONTAINER_RUNTIME    docker | singularity | local              (default singularity)
-#   DIANN_IMAGE_REPO     image repo, used as ${repo}:${version}    (default diann)
-#   DIANN_IMAGE          full image override
+#   CONTAINER_RUNTIME    singularity | local                       (default singularity)
+#   DIANN_IMAGE_REPO     registry path used for the docker:// pull fallback  (default diann)
+#   DIANN_IMAGE          full image override (used as docker:// pull fallback)
 #   DIANN_SIF            path to a .sif file (singularity only)
 #   DIANN_BIN            path to local diann binary (local only)   (default: diann on PATH)
 #   EXTRA_DIANN_ARGS     extra args appended verbatim to the diann CLI
@@ -44,7 +44,7 @@ Usage: sbatch $0 <RAW_DIR> <FASTA> <OUTPUT_DIR> <VERSION>
 
 Env vars (optional):
   THREADS              (default 48)
-  CONTAINER_RUNTIME    docker | singularity | local  (default singularity)
+  CONTAINER_RUNTIME    singularity | local             (default singularity)
   DIANN_IMAGE_REPO     image repo                  (default 'diann')
   DIANN_IMAGE          full image override
   DIANN_SIF            singularity .sif path override
@@ -156,18 +156,6 @@ substitute() {
     done
 }
 
-run_docker() {
-    local raw=/data/raw fasta=/data/fasta out=/data/output
-    mapfile -t args < <(substitute "$raw" "$fasta/$FASTA_NAME" "$out")
-    docker run --rm \
-        -v "$RAW_DIR":"$raw":ro \
-        -v "$FASTA_HOST_DIR":"$fasta":ro \
-        -v "$OUTPUT_DIR":"$out" \
-        "$DIANN_IMAGE" \
-        diann "${args[@]}" $EXTRA_DIANN_ARGS \
-        2>&1 | tee "$LOG_FILE"
-}
-
 run_singularity() {
     local raw=/data/raw fasta=/data/fasta out=/data/output
     local image_arg
@@ -207,10 +195,9 @@ run_local() {
 cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 case "$CONTAINER_RUNTIME" in
-    docker)      run_docker ;;
     singularity) run_singularity ;;
     local)       run_local ;;
-    *) echo "ERROR: unknown CONTAINER_RUNTIME=$CONTAINER_RUNTIME (expected docker|singularity|local)"; exit 1 ;;
+    *) echo "ERROR: unknown CONTAINER_RUNTIME=$CONTAINER_RUNTIME (expected singularity|local)"; exit 1 ;;
 esac
 
 DIANN_EXIT="${PIPESTATUS[0]}"
