@@ -1,0 +1,10 @@
+{
+  "dataset": "PXD071075",
+  "diann_version": "1_8_1",
+  "sweep_cores": null,
+  "queue_size": null,
+  "cluster_cores_requested": 48,
+  "run_kind": "baseline",
+  "point_id": "v1_8_1_baseline_48cpu",
+  "submitted_at_utc": "2026-05-19T09:00:00Z"
+}

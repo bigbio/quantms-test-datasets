@@ -1,0 +1,9 @@
+{
+  "dataset": "PXD071075",
+  "diann_version": "2_5_0",
+  "sweep_cores": 50,
+  "queue_size": 7,
+  "slurm_job_id": "12345",
+  "slurm_submit_dir": "/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075/v2_5_0_sweep_050cores",
+  "started_at_utc": "2026-05-19T10:00:00Z"
+}
