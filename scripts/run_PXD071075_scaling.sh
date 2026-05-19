@@ -52,7 +52,7 @@ RAW_DIR="${RAW_DIR:-/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD0
 BASE_RESULTS="${BASE_RESULTS:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075}"
 BASE_WORK="${BASE_WORK:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_work/PXD071075}"
 LOGS_DIR="${LOGS_DIR:-/hps/nobackup/juan/pride/reanalysis/logs/PXD071075}"
-NXF_SINGULARITY_CACHEDIR="${NXF_SINGULARITY_CACHEDIR:-/hps/nobackup/juan/pride/reanalysis/singularity}"
+export NXF_SINGULARITY_CACHEDIR="${NXF_SINGULARITY_CACHEDIR:-/hps/nobackup/juan/pride/reanalysis/singularity}"
 
 SDRF="$REPO_ROOT/benchmarks/dia/OrbitrapEclipse/PXD071075/PXD071075.sdrf.tsv"
 FASTA="$REPO_ROOT/benchmarks/dia/OrbitrapEclipse/PXD071075/UP000005640_9606.fasta"
@@ -155,6 +155,7 @@ build_cmd_into() {
             --mem="${per_job_mem_gb}G"
             --cpus-per-task="$cpus_per_task"
             --time="${time_limit_hours}:00:00"
+            --export="ALL,NXF_SINGULARITY_CACHEDIR=$NXF_SINGULARITY_CACHEDIR"
             "$SCRIPT_DIR/run_diann.sh"
             "$RAW_DIR" "$FASTA" "$results_dir" "$version"
         )
