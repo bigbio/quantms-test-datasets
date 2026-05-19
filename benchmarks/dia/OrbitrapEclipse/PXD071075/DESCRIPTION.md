@@ -41,7 +41,7 @@ This benchmark also drives a 7-point scaling sweep documented in
 > **Note on DIA-NN 1.8.1:** The bundled ThermoRawFileReader in DIA-NN 1.8.1
 > rejects the 2024 Orbitrap Eclipse `.raw` format. To keep the cross-version
 > baseline meaningful, the v1.8.1 baseline reads pre-converted `.mzML` files
-> (produced by [scripts/convert_PXD071075_raw_to_mzml.sh](../../../scripts/convert_PXD071075_raw_to_mzml.sh)
+> (produced by [scripts/convert_raw_to_mzml.sh](../../../scripts/convert_raw_to_mzml.sh)
 > using ThermoRawFileParser). DIA-NN 2.5.0 and the Nextflow sweep read `.raw`
 > directly (2.5.0's reader handles the new format; quantms uses ThermoRawFileParser
 > internally for the sweep). One-time conversion command:
@@ -51,7 +51,8 @@ This benchmark also drives a 7-point scaling sweep documented in
 > /hps/nobackup/juan/pride/reanalysis/scripts/pull_singularity_images.sh
 >
 > # 2) Submit a SLURM array job (one task per raw file, 50 concurrent by default):
-> /hps/nobackup/juan/pride/reanalysis/scripts/convert_PXD071075_raw_to_mzml.sh
+> /hps/nobackup/juan/pride/reanalysis/scripts/convert_raw_to_mzml.sh \
+>     /hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075
 > ```
 >
 > **Format-asymmetry caveat:** the v1.8.1 baseline reads mzML while v2.5.0 reads
