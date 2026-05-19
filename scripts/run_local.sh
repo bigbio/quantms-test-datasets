@@ -182,13 +182,28 @@ fi
 # Record what we're about to run so the aggregator can match results to
 # sweep points later. SWEEP_CORES and QUEUE_SIZE are optional; if unset,
 # null is written so the JSON is still valid.
+
+# Dataset identifier for the metadata file. Defaults to the SDRF basename
+# (e.g. "PXD071075", "PXD049412") so each benchmark gets the right label,
+# but can be overridden via DATASET env var if the caller knows better.
+DATASET_NAME="${DATASET:-$(basename "$SDRF_FILE" .sdrf.tsv)}"
+
+# slurm_job_id is either a quoted string (when set) or the unquoted JSON
+# literal null (when unset / interactive). Avoid emitting "" which downstream
+# tooling could mistake for a truthy value.
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+    SLURM_JOB_ID_JSON="\"$SLURM_JOB_ID\""
+else
+    SLURM_JOB_ID_JSON="null"
+fi
+
 cat >"$RESULTS_DIR/run_metadata.json" <<EOF
 {
-  "dataset": "PXD071075",
+  "dataset": "$DATASET_NAME",
   "diann_version": "$DIANN_VERSION",
   "sweep_cores": ${SWEEP_CORES:-null},
   "queue_size": ${QUEUE_SIZE:-null},
-  "slurm_job_id": "${SLURM_JOB_ID:-}",
+  "slurm_job_id": $SLURM_JOB_ID_JSON,
   "slurm_submit_dir": "${SLURM_SUBMIT_DIR:-$PWD}",
   "started_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }

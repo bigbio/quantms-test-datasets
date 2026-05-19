@@ -6,7 +6,7 @@
 set -euo pipefail
 
 TMP=$(mktemp -d)
-trap "rm -rf '$TMP'" EXIT
+trap 'rm -rf "$TMP"' EXIT
 
 RESULTS_DIR="$TMP/results"
 mkdir -p "$RESULTS_DIR"
@@ -18,8 +18,9 @@ SLURM_JOB_ID="999"
 SLURM_SUBMIT_DIR="/some/dir"
 DIANN_VERSION="2_5_0"
 
-# Inline reproduction of the snippet that lives in run_local.sh.
-# Keep in sync with the EXTRA_CFG_ARGS / metadata block.
+# Inline reproduction of the snippet that lives in run_local.sh
+# (currently at lines ~170-205). The heredoc fields must stay
+# byte-for-byte in sync with the runner; if you change one, change both.
 EXTRA_CFG_ARGS=()
 if [ -n "${QUEUE_SIZE:-}" ]; then
     cat >"$RESULTS_DIR/queue_size.config" <<EOF
@@ -28,13 +29,20 @@ EOF
     EXTRA_CFG_ARGS+=( -c "$RESULTS_DIR/queue_size.config" )
 fi
 
+DATASET_NAME="PXD071075"
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+    SLURM_JOB_ID_JSON="\"$SLURM_JOB_ID\""
+else
+    SLURM_JOB_ID_JSON="null"
+fi
+
 cat >"$RESULTS_DIR/run_metadata.json" <<EOF
 {
-  "dataset": "PXD071075",
+  "dataset": "$DATASET_NAME",
   "diann_version": "$DIANN_VERSION",
   "sweep_cores": ${SWEEP_CORES:-null},
   "queue_size": ${QUEUE_SIZE:-null},
-  "slurm_job_id": "${SLURM_JOB_ID:-}",
+  "slurm_job_id": $SLURM_JOB_ID_JSON,
   "slurm_submit_dir": "${SLURM_SUBMIT_DIR:-$PWD}",
   "started_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
@@ -62,5 +70,33 @@ EOF
 fi
 
 [ ! -f "$RESULTS_DIR_B/queue_size.config" ] || { echo "FAIL: queue_size.config should NOT exist when QUEUE_SIZE unset"; exit 1; }
+
+# Case B also writes run_metadata.json — verify null literals for the unset
+# sweep_cores / queue_size, and that slurm_job_id is unquoted null when
+# SLURM_JOB_ID is empty.
+unset SLURM_JOB_ID
+DIANN_VERSION="2_5_0"
+DATASET_NAME="PXD071075"
+if [ -n "${SLURM_JOB_ID:-}" ]; then
+    SLURM_JOB_ID_JSON="\"$SLURM_JOB_ID\""
+else
+    SLURM_JOB_ID_JSON="null"
+fi
+
+cat >"$RESULTS_DIR_B/run_metadata.json" <<EOF
+{
+  "dataset": "$DATASET_NAME",
+  "diann_version": "$DIANN_VERSION",
+  "sweep_cores": ${SWEEP_CORES:-null},
+  "queue_size": ${QUEUE_SIZE:-null},
+  "slurm_job_id": $SLURM_JOB_ID_JSON,
+  "slurm_submit_dir": "${SLURM_SUBMIT_DIR:-$PWD}",
+  "started_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+
+grep -q '"sweep_cores": null' "$RESULTS_DIR_B/run_metadata.json" || { echo "FAIL: case B metadata missing 'sweep_cores: null'"; exit 1; }
+grep -q '"queue_size": null'  "$RESULTS_DIR_B/run_metadata.json" || { echo "FAIL: case B metadata missing 'queue_size: null'"; exit 1; }
+grep -q '"slurm_job_id": null' "$RESULTS_DIR_B/run_metadata.json" || { echo "FAIL: case B metadata missing 'slurm_job_id: null' (must be unquoted)"; exit 1; }
 
 echo "OK: queue_size + metadata smoke test passed"
