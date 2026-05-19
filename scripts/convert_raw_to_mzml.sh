@@ -71,7 +71,7 @@ if [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
         --bind "$(dirname "$raw")":/in:ro \
         --bind "$MZML_DIR":/out \
         "$TRFP_SIF" \
-        ThermoRawFileParser.sh -i="/in/$(basename "$raw")" -o=/out -f=2
+        ThermoRawFileParser -i="/in/$(basename "$raw")" -o=/out -f=2
 
     [ -f "$out" ] && [ -s "$out" ] || { echo "ERROR: $out missing or empty after conversion" >&2; exit 1; }
     echo "OK: $out ($(stat -c%s "$out") bytes)"
