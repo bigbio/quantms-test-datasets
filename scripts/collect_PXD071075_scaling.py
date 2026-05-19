@@ -24,6 +24,9 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+import matplotlib
+matplotlib.use("Agg")  # headless — no display required on the cluster
+import matplotlib.pyplot as plt
 import pandas as pd
 
 DEFAULT_BASE_RESULTS = Path(
@@ -309,6 +312,60 @@ def write_timings_csv(df: pd.DataFrame, csv_path: Path) -> None:
     df.to_csv(csv_path, index=False)
 
 
+def plot_scaling(df: pd.DataFrame, plots_dir: Path) -> None:
+    """Render cores_vs_walltime.png and cores_vs_speedup.png into plots_dir."""
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    successful = df[df["exit_status"].isin(["OK", "PARTIAL"])].copy()
+
+    # --- cores_vs_walltime.png -----------------------------------------
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sweep = successful[successful["run_kind"] == "sweep"].sort_values("cluster_cores")
+    if not sweep.empty:
+        ax.plot(sweep["cluster_cores"], sweep["slurm_walltime_s"],
+                marker="o", label="v2.5.0 sweep", color="C0")
+    for version, color in [("1_8_1", "C2"), ("2_5_0", "C3")]:
+        b = successful[(successful["run_kind"] == "baseline") & (successful["version"] == version)]
+        if not b.empty:
+            ax.scatter(b["cluster_cores"], b["slurm_walltime_s"],
+                       marker="s", s=120, color=color, label=f"v{version.replace('_', '.')} baseline (single node)")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlabel("Cluster cores")
+    ax.set_ylabel("Wall-time (seconds, log)")
+    ax.set_title("PXD071075 scaling — cores vs. wall-time")
+    ax.grid(True, which="both", linestyle=":", alpha=0.5)
+    ax.legend(loc="best")
+    fig.tight_layout()
+    fig.savefig(plots_dir / "cores_vs_walltime.png", dpi=150)
+    plt.close(fig)
+
+    # --- cores_vs_speedup.png ------------------------------------------
+    fig, ax = plt.subplots(figsize=(8, 6))
+    if not sweep.empty and len(sweep) >= 2:
+        ref_row = sweep[sweep["cluster_cores"] == sweep["cluster_cores"].max()].iloc[0]
+        ref_walltime = ref_row["slurm_walltime_s"]
+        sweep_with_speedup = sweep.copy()
+        sweep_with_speedup["speedup"] = ref_walltime / sweep_with_speedup["slurm_walltime_s"].replace(0, pd.NA)
+        ax.plot(sweep_with_speedup["cluster_cores"], sweep_with_speedup["speedup"],
+                marker="o", label=f"Observed (ref = {int(ref_row['cluster_cores'])} cores)", color="C0")
+        # Ideal linear scaling: speedup proportional to cores / ref_cores
+        ax.plot(sweep_with_speedup["cluster_cores"],
+                sweep_with_speedup["cluster_cores"] / ref_row["cluster_cores"],
+                linestyle="--", label="Ideal linear", color="C1")
+    else:
+        ax.text(0.5, 0.5, "Not enough sweep points to plot speedup",
+                ha="center", va="center", transform=ax.transAxes)
+    ax.set_xlabel("Cluster cores")
+    ax.set_ylabel("Speedup (ref / observed wall-time)")
+    ax.set_title("PXD071075 scaling — speedup")
+    ax.grid(True, linestyle=":", alpha=0.5)
+    if not sweep.empty and len(sweep) >= 2:
+        ax.legend(loc="best")
+    fig.tight_layout()
+    fig.savefig(plots_dir / "cores_vs_speedup.png", dpi=150)
+    plt.close(fig)
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-results", type=Path, default=DEFAULT_BASE_RESULTS,
@@ -328,6 +385,10 @@ def main(argv: Iterable[str] | None = None) -> int:
     write_timings_csv(df, csv_path)
     print(f"Wrote {csv_path} ({len(df)} rows)")
     print(df.to_string(index=False))
+    if not args.no_plot:
+        plots_dir = args.base_results / "plots"
+        plot_scaling(df, plots_dir)
+        print(f"Wrote plots to {plots_dir}/")
     return 0
 
 

@@ -189,3 +189,48 @@ def test_write_timings_csv_round_trip(tmp_path):
     reloaded = pd.read_csv(csv_path)
     assert len(reloaded) == len(df)
     assert set(reloaded.columns) == set(df.columns)
+
+
+def _fake_timings_df():
+    """Hand-built DataFrame for plot tests — doesn't need fixtures."""
+    return pd.DataFrame([
+        {"point_id": "v1_8_1_baseline_48cpu", "version": "1_8_1", "run_kind": "baseline",
+         "cluster_cores": 48, "queue_size": None, "sdrf_samples": 2310,
+         "slurm_walltime_s": 50000, "nextflow_walltime_s": None,
+         "total_cpu_s": 50000, "peak_mem_gb": 280.0,
+         "tasks_submitted": 1, "tasks_succeeded": 1, "exit_status": "OK"},
+        {"point_id": "v2_5_0_baseline_48cpu", "version": "2_5_0", "run_kind": "baseline",
+         "cluster_cores": 48, "queue_size": None, "sdrf_samples": 2310,
+         "slurm_walltime_s": 40000, "nextflow_walltime_s": None,
+         "total_cpu_s": 40000, "peak_mem_gb": 270.0,
+         "tasks_submitted": 1, "tasks_succeeded": 1, "exit_status": "OK"},
+        {"point_id": "v2_5_0_sweep_010cores", "version": "2_5_0", "run_kind": "sweep",
+         "cluster_cores": 10, "queue_size": 2, "sdrf_samples": 2310,
+         "slurm_walltime_s": 600000, "nextflow_walltime_s": 590000,
+         "total_cpu_s": 590000, "peak_mem_gb": 60.0,
+         "tasks_submitted": 2400, "tasks_succeeded": 2400, "exit_status": "OK"},
+        {"point_id": "v2_5_0_sweep_200cores", "version": "2_5_0", "run_kind": "sweep",
+         "cluster_cores": 200, "queue_size": 25, "sdrf_samples": 2310,
+         "slurm_walltime_s": 30000, "nextflow_walltime_s": 29500,
+         "total_cpu_s": 29500, "peak_mem_gb": 65.0,
+         "tasks_submitted": 2400, "tasks_succeeded": 2400, "exit_status": "OK"},
+    ])
+
+
+import pandas as pd  # for test fixture builder
+
+def test_plot_scaling_writes_two_pngs(tmp_path):
+    df = _fake_timings_df()
+    plots_dir = tmp_path / "plots"
+    agg.plot_scaling(df, plots_dir)
+    assert (plots_dir / "cores_vs_walltime.png").is_file()
+    assert (plots_dir / "cores_vs_speedup.png").is_file()
+
+
+def test_plot_scaling_handles_no_sweep_rows(tmp_path):
+    # Only baselines -> walltime plot still drawn, speedup plot is a stub.
+    df = _fake_timings_df().head(2)
+    plots_dir = tmp_path / "plots"
+    agg.plot_scaling(df, plots_dir)
+    assert (plots_dir / "cores_vs_walltime.png").is_file()
+    assert (plots_dir / "cores_vs_speedup.png").is_file()
