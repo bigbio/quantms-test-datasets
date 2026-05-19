@@ -1,5 +1,4 @@
 point_id	version	run_kind	cluster_cores	queue_size	per_job_mem_gb	head_mem_gb	cpus_per_task	time_limit_hours
-v1_8_1_baseline_48cpu	1_8_1	baseline	48	0	300	0	48	72
 v2_5_0_baseline_48cpu	2_5_0	baseline	48	0	300	0	48	72
 v2_5_0_sweep_010cores	2_5_0	sweep	10	2	0	8	2	240
 v2_5_0_sweep_020cores	2_5_0	sweep	20	3	0	8	2	168

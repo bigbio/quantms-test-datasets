@@ -35,12 +35,16 @@ pipeline via `scripts/run_local.sh` (Nextflow head) and `scripts/run_diann.sh`
 
 ## Scaling benchmark
 
-This benchmark also drives a 7-point scaling sweep documented in
+This benchmark also drives a 6-point scaling sweep documented in
 [scaling/sweep_matrix.tsv](scaling/sweep_matrix.tsv):
+
+> **Note on DIA-NN 1.8.1:** earlier drafts of this benchmark included a v1.8.1 baseline.
+> DIA-NN 1.8.1's bundled Thermo reader rejects the 2024 Orbitrap Eclipse `.raw` files
+> ("Thermo RAW file format not supported"), so the cross-version comparison is not
+> possible on this dataset. The scaling sweep stays v2.5.0-only.
 
 | Point | Version | Kind | Cluster cores | queueSize | Notes |
 |---|---|---|---|---|---|
-| `v1_8_1_baseline_48cpu` | 1.8.1 | baseline | 48 | n/a | Single fat node, 300 GB, direct DIA-NN |
 | `v2_5_0_baseline_48cpu` | 2.5.0 | baseline | 48 | n/a | Single fat node, 300 GB, direct DIA-NN |
 | `v2_5_0_sweep_010cores` | 2.5.0 | sweep | 10 | 2 | Nextflow `pride_slurm`, queueSize = ceil(10/8) |
 | `v2_5_0_sweep_020cores` | 2.5.0 | sweep | 20 | 3 | Nextflow `pride_slurm`, queueSize = ceil(20/8) |
@@ -61,7 +65,7 @@ From the cluster head node, after staging this repo:
 # Preview the plan (no sbatch):
 DRY_RUN=1 ./scripts/run_PXD071075_scaling.sh
 
-# Submit the chain (7 sbatch calls, sequential via afterok):
+# Submit the chain (6 sbatch calls, sequential via afterok):
 ./scripts/run_PXD071075_scaling.sh
 
 # After the chain completes, aggregate + plot:

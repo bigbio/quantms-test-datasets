@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Smoke test: DRY_RUN of the PXD071075 scaling submitter must print exactly
-# 7 sbatch lines, with the first two using run_diann.sh, the next five
+# 6 sbatch lines, with the first one using run_diann.sh, the next five
 # using run_local.sh, and a dependency chain wiring them sequentially.
 
 set -euo pipefail
@@ -32,7 +32,6 @@ echo "$OUTPUT"
 echo "---"
 
 # Assertions
-echo "$OUTPUT" | grep -qE "run_diann.sh.*1_8_1"      || { echo "FAIL: missing v1_8_1 baseline (run_diann.sh)"; exit 1; }
 echo "$OUTPUT" | grep -qE "run_diann.sh.*2_5_0"      || { echo "FAIL: missing v2_5_0 baseline (run_diann.sh)"; exit 1; }
 echo "$OUTPUT" | grep -qE "run_local.sh.*2_5_0"      || { echo "FAIL: missing sweep points (run_local.sh)"; exit 1; }
 echo "$OUTPUT" | grep -qE "QUEUE_SIZE=2"             || { echo "FAIL: missing 10-core point (QUEUE_SIZE=2)"; exit 1; }
@@ -41,14 +40,14 @@ echo "$OUTPUT" | grep -qE -- "--mem=300G"            || { echo "FAIL: baseline m
 echo "$OUTPUT" | grep -qE -- "--cpus-per-task=48"    || { echo "FAIL: baseline missing --cpus-per-task=48"; exit 1; }
 echo "$OUTPUT" | grep -qE -- "--dependency=afterok:" || { echo "FAIL: chain missing afterok dependency"; exit 1; }
 
-# Exactly 7 sbatch invocations
+# Exactly 6 sbatch invocations
 SBATCH_COUNT=$(echo "$OUTPUT" | grep -cE "^\[dry-run.*\] sbatch")
-[ "$SBATCH_COUNT" -eq 7 ] || { echo "FAIL: expected 7 sbatch lines, got $SBATCH_COUNT"; exit 1; }
+[ "$SBATCH_COUNT" -eq 6 ] || { echo "FAIL: expected 6 sbatch lines, got $SBATCH_COUNT"; exit 1; }
 
-# Chain ordering: the 7th sbatch line (idx=6) must depend on DRY5
-echo "$OUTPUT" | grep -qE "^\[dry-run idx=6 depends-on=DRY5\]" || { echo "FAIL: last sbatch line should depend on DRY5"; exit 1; }
+# Chain ordering: the 6th sbatch line (idx=5) must depend on DRY4
+echo "$OUTPUT" | grep -qE "^\[dry-run idx=5 depends-on=DRY4\]" || { echo "FAIL: last sbatch line should depend on DRY4"; exit 1; }
 
 # 10-core sweep point must use the generous 240h time limit
 echo "$OUTPUT" | grep -qE "QUEUE_SIZE=2.*--time=240:00:00|--time=240:00:00.*QUEUE_SIZE=2" || { echo "FAIL: 10-core sweep missing --time=240:00:00"; exit 1; }
 
-echo "OK: DRY_RUN produces 7 expected sbatch invocations"
+echo "OK: DRY_RUN produces 6 expected sbatch invocations"
