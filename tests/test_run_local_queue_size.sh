@@ -15,6 +15,7 @@ mkdir -p "$RESULTS_DIR"
 QUEUE_SIZE=7
 SWEEP_CORES=50
 SLURM_JOB_ID="999"
+SLURM_SUBMIT_DIR="/some/dir"
 DIANN_VERSION="2_5_0"
 
 # Inline reproduction of the snippet that lives in run_local.sh.
@@ -34,6 +35,7 @@ cat >"$RESULTS_DIR/run_metadata.json" <<EOF
   "sweep_cores": ${SWEEP_CORES:-null},
   "queue_size": ${QUEUE_SIZE:-null},
   "slurm_job_id": "${SLURM_JOB_ID:-}",
+  "slurm_submit_dir": "${SLURM_SUBMIT_DIR:-$PWD}",
   "started_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 EOF
@@ -41,6 +43,10 @@ EOF
 grep -q "queueSize = 7" "$RESULTS_DIR/queue_size.config" || { echo "FAIL: queue_size.config missing 'queueSize = 7'"; exit 1; }
 grep -q '"sweep_cores": 50' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing sweep_cores"; exit 1; }
 grep -q '"queue_size": 7' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing queue_size"; exit 1; }
+grep -q '"dataset": "PXD071075"' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing dataset"; exit 1; }
+grep -q '"diann_version": "2_5_0"' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing diann_version"; exit 1; }
+grep -q '"slurm_job_id": "999"' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing slurm_job_id"; exit 1; }
+grep -q '"slurm_submit_dir": "/some/dir"' "$RESULTS_DIR/run_metadata.json" || { echo "FAIL: metadata missing slurm_submit_dir"; exit 1; }
 
 # --- Case B: QUEUE_SIZE unset (baseline of sweep extension behaviour) ----
 RESULTS_DIR_B="$TMP/results_b"
