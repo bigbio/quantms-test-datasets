@@ -129,45 +129,45 @@ write_baseline_metadata() {
 EOF
 }
 
-# Build sbatch invocation for one row. Echoes the full command on stdout.
-# In dry-run mode the caller just prints it; otherwise it's executed.
-build_cmd() {
-    local row="$1" idx="$2" prev_jid="$3"
-    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
-
-    local results_dir="$BASE_RESULTS/$point_id"
-    local work_dir="$BASE_WORK/$point_id"
-    local log_dir="$LOGS_DIR/$point_id"
-    mkdir -p "$results_dir" "$log_dir"
+# Populate a caller-provided array with the sbatch invocation for one row.
+# Using a nameref (declare -n) keeps array elements properly quoted and
+# avoids the eval-on-string pitfalls of the previous design. Mirrors the
+# sibling proteobench_diann_versions.sh pattern.
+build_cmd_into() {
+    local -n out_arr=$1
+    local point_id="$2" version="$3" run_kind="$4" cluster_cores="$5"
+    local queue_size="$6" per_job_mem_gb="$7" head_mem_gb="$8" cpus_per_task="$9"
+    local results_dir="${10}" log_dir="${11}" prev_jid="${12}"
 
     local out_file="$log_dir/slurm_%j.out"
     local err_file="$log_dir/slurm_%j.err"
 
-    local sbatch_args=( --parsable
+    out_arr=( sbatch --parsable
         --job-name="pxd071075_${point_id}"
         --output="$out_file"
         --error="$err_file"
     )
-    [ -n "$prev_jid" ] && sbatch_args+=( "--dependency=afterok:$prev_jid" )
+    [ -n "$prev_jid" ] && out_arr+=( "--dependency=afterok:$prev_jid" )
 
     if [ "$run_kind" = "baseline" ]; then
-        write_baseline_metadata "$results_dir" "$point_id" "$version" "$cluster_cores"
-        sbatch_args+=(
+        out_arr+=(
             --mem="${per_job_mem_gb}G"
             --cpus-per-task="$cpus_per_task"
             --time=72:00:00
+            "$SCRIPT_DIR/run_diann.sh"
+            "$RAW_DIR" "$FASTA" "$results_dir" "$version"
         )
-        echo "sbatch ${sbatch_args[*]} $SCRIPT_DIR/run_diann.sh $RAW_DIR $FASTA $results_dir $version"
     else
-        # Sweep: pass QUEUE_SIZE + SWEEP_CORES via --export so run_local.sh
-        # picks them up (it writes run_metadata.json + queue_size.config).
-        sbatch_args+=(
+        local work_dir="$BASE_WORK/$point_id"
+        mkdir -p "$work_dir"
+        out_arr+=(
             --mem="${head_mem_gb}G"
             --cpus-per-task="$cpus_per_task"
             --time=168:00:00
             --export="ALL,QUEUE_SIZE=$queue_size,SWEEP_CORES=$cluster_cores"
+            "$SCRIPT_DIR/run_local.sh"
+            "$SDRF" "$RAW_DIR" "$FASTA" "$work_dir" "$results_dir" "$version"
         )
-        echo "sbatch ${sbatch_args[*]} $SCRIPT_DIR/run_local.sh $SDRF $RAW_DIR $FASTA $work_dir $results_dir $version"
     fi
 }
 
@@ -176,14 +176,28 @@ SUBMITTED_IDS=()
 idx=0
 prev_jid=""
 for row in "${ROWS[@]}"; do
-    cmd=$(build_cmd "$row" "$idx" "$prev_jid")
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
+
+    results_dir="$BASE_RESULTS/$point_id"
+    log_dir="$LOGS_DIR/$point_id"
+    mkdir -p "$results_dir" "$log_dir"
+
+    declare -a CMD_ARGS=()
+    build_cmd_into CMD_ARGS \
+        "$point_id" "$version" "$run_kind" "$cluster_cores" \
+        "$queue_size" "$per_job_mem_gb" "$head_mem_gb" "$cpus_per_task" \
+        "$results_dir" "$log_dir" "$prev_jid"
+
     if [ "$DRY_RUN" = "1" ]; then
-        printf '[dry-run idx=%d%s] %s\n' "$idx" "${prev_jid:+ depends-on=$prev_jid}" "$cmd"
+        printf '[dry-run idx=%d%s] %s\n' "$idx" "${prev_jid:+ depends-on=$prev_jid}" "${CMD_ARGS[*]}"
         prev_jid="DRY$idx"
     else
-        jid=$(eval "$cmd")
+        # Real-submit only: write baseline metadata, then dispatch.
+        if [ "$run_kind" = "baseline" ]; then
+            write_baseline_metadata "$results_dir" "$point_id" "$version" "$cluster_cores"
+        fi
+        jid=$("${CMD_ARGS[@]}")
         SUBMITTED_IDS+=("$jid")
-        IFS='|' read -r point_id _ <<<"$row"
         printf '  submitted %-30s job %s%s\n' "$point_id" "$jid" "${prev_jid:+ (after $prev_jid)}"
         prev_jid="$jid"
     fi
@@ -192,7 +206,7 @@ done
 
 echo
 if [ "$DRY_RUN" = "1" ]; then
-    echo "Dry-run complete (no jobs submitted)."
+    echo "Dry-run complete (no jobs submitted; no per-point side effects)."
 else
     echo "Submitted ${#SUBMITTED_IDS[@]} jobs. Watch with: squeue -u \"\$USER\""
     echo "Per-point logs:     $LOGS_DIR/<point_id>/slurm_<jobid>.{out,err}"

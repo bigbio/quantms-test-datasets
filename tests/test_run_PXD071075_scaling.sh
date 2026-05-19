@@ -45,4 +45,7 @@ echo "$OUTPUT" | grep -qE -- "--dependency=afterok:" || { echo "FAIL: chain miss
 SBATCH_COUNT=$(echo "$OUTPUT" | grep -cE "^\[dry-run.*\] sbatch")
 [ "$SBATCH_COUNT" -eq 7 ] || { echo "FAIL: expected 7 sbatch lines, got $SBATCH_COUNT"; exit 1; }
 
+# Chain ordering: the 7th sbatch line (idx=6) must depend on DRY5
+echo "$OUTPUT" | grep -qE "^\[dry-run idx=6 depends-on=DRY5\]" || { echo "FAIL: last sbatch line should depend on DRY5"; exit 1; }
+
 echo "OK: DRY_RUN produces 7 expected sbatch invocations"
