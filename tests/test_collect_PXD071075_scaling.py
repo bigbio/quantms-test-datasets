@@ -141,7 +141,7 @@ def test_assemble_timings_columns():
     expected_cols = {
         "point_id", "version", "run_kind",
         "cluster_cores", "queue_size", "sdrf_samples",
-        "slurm_walltime_s", "nextflow_walltime_s", "total_cpu_s", "peak_mem_gb",
+        "slurm_walltime_s", "total_task_realtime_s", "total_cpu_s", "peak_mem_gb",
         "tasks_submitted", "tasks_succeeded", "exit_status",
     }
     with patch.object(agg, "run_sacct") as mock_sacct:
@@ -196,7 +196,7 @@ def _fake_timings_df():
     return pd.DataFrame([
         {"point_id": "v1_8_1_baseline_48cpu", "version": "1_8_1", "run_kind": "baseline",
          "cluster_cores": 48, "queue_size": None, "sdrf_samples": 2310,
-         "slurm_walltime_s": 50000, "nextflow_walltime_s": None,
+         "slurm_walltime_s": 50000, "total_task_realtime_s": None,
          "total_cpu_s": 50000, "peak_mem_gb": 280.0,
          "tasks_submitted": 1, "tasks_succeeded": 1, "exit_status": "OK"},
         {"point_id": "v2_5_0_baseline_48cpu", "version": "2_5_0", "run_kind": "baseline",
@@ -206,12 +206,12 @@ def _fake_timings_df():
          "tasks_submitted": 1, "tasks_succeeded": 1, "exit_status": "OK"},
         {"point_id": "v2_5_0_sweep_010cores", "version": "2_5_0", "run_kind": "sweep",
          "cluster_cores": 10, "queue_size": 2, "sdrf_samples": 2310,
-         "slurm_walltime_s": 600000, "nextflow_walltime_s": 590000,
+         "slurm_walltime_s": 600000, "total_task_realtime_s": 590000,
          "total_cpu_s": 590000, "peak_mem_gb": 60.0,
          "tasks_submitted": 2400, "tasks_succeeded": 2400, "exit_status": "OK"},
         {"point_id": "v2_5_0_sweep_200cores", "version": "2_5_0", "run_kind": "sweep",
          "cluster_cores": 200, "queue_size": 25, "sdrf_samples": 2310,
-         "slurm_walltime_s": 30000, "nextflow_walltime_s": 29500,
+         "slurm_walltime_s": 30000, "total_task_realtime_s": 29500,
          "total_cpu_s": 29500, "peak_mem_gb": 65.0,
          "tasks_submitted": 2400, "tasks_succeeded": 2400, "exit_status": "OK"},
     ])

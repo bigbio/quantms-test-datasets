@@ -262,7 +262,7 @@ Output: `$BASE_RESULTS/PXD071075/timings.csv`:
 | `queue_size` | int? | null for baselines |
 | `sdrf_samples` | int | 2310 |
 | `slurm_walltime_s` | int | head-job Elapsed in seconds |
-| `nextflow_walltime_s` | int? | from trace.txt, null for baselines |
+| `total_task_realtime_s` | int? | sum of per-task realtime from trace.txt, null for baselines |
 | `total_cpu_s` | int | sum across all SLURM jobs (head + children) |
 | `peak_mem_gb` | float | max MaxRSS observed |
 | `tasks_submitted` | int | count from trace.txt (sweep) or 1 (baseline) |

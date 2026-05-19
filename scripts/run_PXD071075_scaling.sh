@@ -30,8 +30,9 @@
 
 set -euo pipefail
 
-if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
-    echo "ERROR: this script needs bash 4+ (current: ${BASH_VERSION:-unknown})." >&2
+# build_cmd_into uses `declare -n` (nameref), which requires bash 4.3+.
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ] || { [ "${BASH_VERSINFO[0]:-0}" -eq 4 ] && [ "${BASH_VERSINFO[1]:-0}" -lt 3 ]; }; then
+    echo "ERROR: this script needs bash 4.3+ for nameref support (current: ${BASH_VERSION:-unknown})." >&2
     echo "       On macOS, install one via: brew install bash" >&2
     exit 1
 fi
@@ -74,13 +75,13 @@ fi
 mkdir -p "$BASE_RESULTS" "$BASE_WORK" "$LOGS_DIR" "$NXF_SINGULARITY_CACHEDIR"
 
 # --- Read sweep matrix ---------------------------------------------------
-# Columns: point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task
+# Columns: point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours
 ROWS=()
-while IFS=$'\t' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task; do
+while IFS=$'\t' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours; do
     # Skip header
     [ "$point_id" = "point_id" ] && continue
     [ -z "$point_id" ] && continue
-    ROWS+=("$point_id|$version|$run_kind|$cluster_cores|$queue_size|$per_job_mem_gb|$head_mem_gb|$cpus_per_task")
+    ROWS+=("$point_id|$version|$run_kind|$cluster_cores|$queue_size|$per_job_mem_gb|$head_mem_gb|$cpus_per_task|$time_limit_hours")
 done < "$MATRIX"
 
 if [ "${#ROWS[@]}" -eq 0 ]; then
@@ -101,11 +102,11 @@ echo
 # --- Plan ----------------------------------------------------------------
 echo "Planning ${#ROWS[@]} sbatch submissions:"
 for row in "${ROWS[@]}"; do
-    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
-    printf "  - %-30s v%-6s kind=%-8s cores=%-3s queue=%-3s mem=%sGB cpus=%s\n" \
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours <<<"$row"
+    printf "  - %-30s v%-6s kind=%-8s cores=%-3s queue=%-3s mem=%sGB cpus=%s time=%sh\n" \
         "$point_id" "$version" "$run_kind" "$cluster_cores" "$queue_size" \
         "$([ "$per_job_mem_gb" = "0" ] && echo "$head_mem_gb" || echo "$per_job_mem_gb")" \
-        "$cpus_per_task"
+        "$cpus_per_task" "$time_limit_hours"
 done
 echo
 
@@ -137,7 +138,7 @@ build_cmd_into() {
     local -n out_arr=$1
     local point_id="$2" version="$3" run_kind="$4" cluster_cores="$5"
     local queue_size="$6" per_job_mem_gb="$7" head_mem_gb="$8" cpus_per_task="$9"
-    local results_dir="${10}" log_dir="${11}" prev_jid="${12}"
+    local results_dir="${10}" log_dir="${11}" prev_jid="${12}" time_limit_hours="${13}"
 
     local out_file="$log_dir/slurm_%j.out"
     local err_file="$log_dir/slurm_%j.err"
@@ -153,7 +154,7 @@ build_cmd_into() {
         out_arr+=(
             --mem="${per_job_mem_gb}G"
             --cpus-per-task="$cpus_per_task"
-            --time=72:00:00
+            --time="${time_limit_hours}:00:00"
             "$SCRIPT_DIR/run_diann.sh"
             "$RAW_DIR" "$FASTA" "$results_dir" "$version"
         )
@@ -163,7 +164,7 @@ build_cmd_into() {
         out_arr+=(
             --mem="${head_mem_gb}G"
             --cpus-per-task="$cpus_per_task"
-            --time=168:00:00
+            --time="${time_limit_hours}:00:00"
             --export="ALL,QUEUE_SIZE=$queue_size,SWEEP_CORES=$cluster_cores"
             "$SCRIPT_DIR/run_local.sh"
             "$SDRF" "$RAW_DIR" "$FASTA" "$work_dir" "$results_dir" "$version"
@@ -176,7 +177,7 @@ SUBMITTED_IDS=()
 idx=0
 prev_jid=""
 for row in "${ROWS[@]}"; do
-    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task <<<"$row"
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours <<<"$row"
 
     results_dir="$BASE_RESULTS/$point_id"
     log_dir="$LOGS_DIR/$point_id"
@@ -186,7 +187,7 @@ for row in "${ROWS[@]}"; do
     build_cmd_into CMD_ARGS \
         "$point_id" "$version" "$run_kind" "$cluster_cores" \
         "$queue_size" "$per_job_mem_gb" "$head_mem_gb" "$cpus_per_task" \
-        "$results_dir" "$log_dir" "$prev_jid"
+        "$results_dir" "$log_dir" "$prev_jid" "$time_limit_hours"
 
     if [ "$DRY_RUN" = "1" ]; then
         printf '[dry-run idx=%d%s] %s\n' "$idx" "${prev_jid:+ depends-on=$prev_jid}" "${CMD_ARGS[*]}"
@@ -198,6 +199,17 @@ for row in "${ROWS[@]}"; do
         fi
         jid=$("${CMD_ARGS[@]}")
         SUBMITTED_IDS+=("$jid")
+        # Patch baseline metadata in-place with the job id returned by sbatch,
+        # so the aggregator's sacct call finds a non-null slurm_job_id.
+        if [ "$run_kind" = "baseline" ]; then
+            python3 -c "
+import json, pathlib, sys
+p = pathlib.Path('$results_dir/run_metadata.json')
+d = json.loads(p.read_text())
+d['slurm_job_id'] = '$jid'
+p.write_text(json.dumps(d, indent=2) + '\n')
+"
+        fi
         printf '  submitted %-30s job %s%s\n' "$point_id" "$jid" "${prev_jid:+ (after $prev_jid)}"
         prev_jid="$jid"
     fi

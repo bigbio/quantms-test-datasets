@@ -48,4 +48,7 @@ SBATCH_COUNT=$(echo "$OUTPUT" | grep -cE "^\[dry-run.*\] sbatch")
 # Chain ordering: the 7th sbatch line (idx=6) must depend on DRY5
 echo "$OUTPUT" | grep -qE "^\[dry-run idx=6 depends-on=DRY5\]" || { echo "FAIL: last sbatch line should depend on DRY5"; exit 1; }
 
+# 10-core sweep point must use the generous 240h time limit
+echo "$OUTPUT" | grep -qE "QUEUE_SIZE=2.*--time=240:00:00|--time=240:00:00.*QUEUE_SIZE=2" || { echo "FAIL: 10-core sweep missing --time=240:00:00"; exit 1; }
+
 echo "OK: DRY_RUN produces 7 expected sbatch invocations"

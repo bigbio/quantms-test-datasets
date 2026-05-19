@@ -292,7 +292,7 @@ def assemble_timings(base_results: Path) -> pd.DataFrame:
                 "queue_size": meta.get("queue_size"),
                 "sdrf_samples": SDRF_SAMPLES,
                 "slurm_walltime_s": sacct_summary["slurm_walltime_s"],
-                "nextflow_walltime_s": total_cpu if run_kind == "sweep" else None,
+                "total_task_realtime_s": total_cpu if run_kind == "sweep" else None,
                 "total_cpu_s": total_cpu,
                 "peak_mem_gb": peak_mem,
                 "tasks_submitted": trace_summary["tasks_submitted"] if run_kind == "sweep" else 1,
