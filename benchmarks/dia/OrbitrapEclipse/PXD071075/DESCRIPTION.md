@@ -47,7 +47,11 @@ This benchmark also drives a 7-point scaling sweep documented in
 > internally for the sweep). One-time conversion command:
 >
 > ```bash
-> sbatch /hps/nobackup/juan/pride/reanalysis/scripts/convert_PXD071075_raw_to_mzml.sh
+> # 1) (Once) pull the singularity images we depend on:
+> /hps/nobackup/juan/pride/reanalysis/scripts/pull_singularity_images.sh
+>
+> # 2) Submit a SLURM array job (one task per raw file, 50 concurrent by default):
+> /hps/nobackup/juan/pride/reanalysis/scripts/convert_PXD071075_raw_to_mzml.sh
 > ```
 >
 > **Format-asymmetry caveat:** the v1.8.1 baseline reads mzML while v2.5.0 reads
