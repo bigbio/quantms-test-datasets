@@ -37,7 +37,14 @@ if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+
+# Repo location. If the script lives at <repo>/scripts/, the auto-detected
+# value works; otherwise the env override or the explicit fallback kicks in.
+if [ -d "$SCRIPT_DIR/../benchmarks" ]; then
+    REPO_ROOT="${REPO_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+else
+    REPO_ROOT="${REPO_ROOT:-/hps/nobackup/juan/pride/reanalysis/quantms-test-datasets}"
+fi
 
 # --- Paths (cluster defaults) -------------------------------------------
 RAW_DIR="${RAW_DIR:-/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075}"
