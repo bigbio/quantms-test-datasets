@@ -135,3 +135,57 @@ def test_run_sacct_returns_zeros_when_sacct_missing():
         "slurm_cputime_s": 0,
         "slurm_maxrss_gb": 0.0,
     }
+
+
+def test_assemble_timings_columns():
+    expected_cols = {
+        "point_id", "version", "run_kind",
+        "cluster_cores", "queue_size", "sdrf_samples",
+        "slurm_walltime_s", "nextflow_walltime_s", "total_cpu_s", "peak_mem_gb",
+        "tasks_submitted", "tasks_succeeded", "exit_status",
+    }
+    with patch.object(agg, "run_sacct") as mock_sacct:
+        mock_sacct.return_value = {
+            "slurm_walltime_s": 5025, "slurm_cputime_s": 5025, "slurm_maxrss_gb": 8.0
+        }
+        df = agg.assemble_timings(FIXTURES)
+    assert set(df.columns) == expected_cols
+
+
+def test_assemble_timings_uses_sdrf_samples_constant():
+    with patch.object(agg, "run_sacct") as mock_sacct:
+        mock_sacct.return_value = {
+            "slurm_walltime_s": 5025, "slurm_cputime_s": 5025, "slurm_maxrss_gb": 8.0
+        }
+        df = agg.assemble_timings(FIXTURES)
+    assert (df["sdrf_samples"] == agg.SDRF_SAMPLES).all()
+
+
+def test_assemble_timings_marks_partial_when_some_failed():
+    with patch.object(agg, "run_sacct") as mock_sacct:
+        mock_sacct.return_value = {
+            "slurm_walltime_s": 5025, "slurm_cputime_s": 5025, "slurm_maxrss_gb": 8.0
+        }
+        df = agg.assemble_timings(FIXTURES)
+    sweep_row = df[df["point_id"] == "v2_5_0_sweep_050cores"].iloc[0]
+    # Fixture trace has 4 succeeded + 1 failed -> PARTIAL
+    assert sweep_row["exit_status"] == "PARTIAL"
+    assert sweep_row["tasks_submitted"] == 5
+    assert sweep_row["tasks_succeeded"] == 4
+
+
+def test_write_timings_csv_round_trip(tmp_path):
+    with patch.object(agg, "run_sacct") as mock_sacct:
+        mock_sacct.return_value = {
+            "slurm_walltime_s": 5025, "slurm_cputime_s": 5025, "slurm_maxrss_gb": 8.0
+        }
+        df = agg.assemble_timings(FIXTURES)
+
+    csv_path = tmp_path / "timings.csv"
+    agg.write_timings_csv(df, csv_path)
+    assert csv_path.is_file()
+
+    import pandas as pd
+    reloaded = pd.read_csv(csv_path)
+    assert len(reloaded) == len(df)
+    assert set(reloaded.columns) == set(df.columns)

@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+import pandas as pd
+
 DEFAULT_BASE_RESULTS = Path(
     "/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075"
 )
@@ -237,28 +239,95 @@ def run_sacct(job_id: str) -> dict:
     return parse_sacct_output(result.stdout)
 
 
+SDRF_SAMPLES = 2310  # PXD071075 has 2,310 single-cell DIA samples.
+
+
+def _classify_exit(submitted: int, succeeded: int, run_kind: str) -> str:
+    """OK / PARTIAL / FAIL based on task counts."""
+    if run_kind == "baseline":
+        # DIA-NN is one process; success/failure determined by trace absence.
+        return "OK" if submitted == 0 else ("OK" if succeeded == submitted else "FAIL")
+    if submitted == 0:
+        return "PENDING"
+    if succeeded == submitted:
+        return "OK"
+    if succeeded == 0:
+        return "FAIL"
+    return "PARTIAL"
+
+
+def assemble_timings(base_results: Path) -> pd.DataFrame:
+    """Build a DataFrame with one row per discovered point.
+
+    For each point: read run_metadata.json, parse trace.txt (if present),
+    call sacct (if slurm_job_id present in metadata).
+    """
+    rows: list[dict] = []
+    for point in discover_points(base_results):
+        meta = point["metadata"]
+        path = point["path"]
+
+        trace_summary = parse_nextflow_trace(path / "nextflow_trace.txt")
+        sacct_summary = (
+            run_sacct(meta["slurm_job_id"])
+            if meta.get("slurm_job_id")
+            else {"slurm_walltime_s": 0, "slurm_cputime_s": 0, "slurm_maxrss_gb": 0.0}
+        )
+
+        # peak_mem_gb: prefer trace (per-task RSS sum is wrong, max is right) but
+        # fall back to sacct MaxRSS when trace is empty (baselines).
+        peak_mem = trace_summary["peak_mem_gb"] or sacct_summary["slurm_maxrss_gb"]
+        total_cpu = trace_summary["total_cpu_s"] or sacct_summary["slurm_cputime_s"]
+
+        run_kind = point["run_kind"]
+        rows.append(
+            {
+                "point_id": point["point_id"],
+                "version": meta.get("diann_version", ""),
+                "run_kind": run_kind,
+                "cluster_cores": meta.get("sweep_cores") or meta.get("cluster_cores_requested") or 0,
+                "queue_size": meta.get("queue_size"),
+                "sdrf_samples": SDRF_SAMPLES,
+                "slurm_walltime_s": sacct_summary["slurm_walltime_s"],
+                "nextflow_walltime_s": total_cpu if run_kind == "sweep" else None,
+                "total_cpu_s": total_cpu,
+                "peak_mem_gb": peak_mem,
+                "tasks_submitted": trace_summary["tasks_submitted"] if run_kind == "sweep" else 1,
+                "tasks_succeeded": trace_summary["tasks_succeeded"] if run_kind == "sweep" else (1 if sacct_summary["slurm_walltime_s"] > 0 else 0),
+                "exit_status": _classify_exit(
+                    trace_summary["tasks_submitted"] if run_kind == "sweep" else 1,
+                    trace_summary["tasks_succeeded"] if run_kind == "sweep" else (1 if sacct_summary["slurm_walltime_s"] > 0 else 0),
+                    run_kind,
+                ),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def write_timings_csv(df: pd.DataFrame, csv_path: Path) -> None:
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(csv_path, index=False)
+
+
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--base-results",
-        type=Path,
-        default=DEFAULT_BASE_RESULTS,
-        help=f"Per-point results root (default: {DEFAULT_BASE_RESULTS})",
-    )
-    parser.add_argument(
-        "--no-plot",
-        action="store_true",
-        help="Skip PNG generation; only write timings.csv",
-    )
+    parser.add_argument("--base-results", type=Path, default=DEFAULT_BASE_RESULTS,
+                        help=f"Per-point results root (default: {DEFAULT_BASE_RESULTS})")
+    parser.add_argument("--no-plot", action="store_true",
+                        help="Skip PNG generation; only write timings.csv")
     args = parser.parse_args(argv)
 
     points = discover_points(args.base_results)
     print(f"Discovered {len(points)} point(s) under {args.base_results}")
-    for p in points:
-        print(f"  - {p['point_id']:<30}  kind={p['run_kind']}  v{p['metadata'].get('diann_version', '?')}")
+    if not points:
+        print("(nothing to aggregate yet)")
+        return 0
 
-    # Subsequent tasks will: parse trace.txt / DIA-NN log, run sacct,
-    # assemble timings DataFrame, write CSV, generate plots.
+    df = assemble_timings(args.base_results)
+    csv_path = args.base_results / "timings.csv"
+    write_timings_csv(df, csv_path)
+    print(f"Wrote {csv_path} ({len(df)} rows)")
+    print(df.to_string(index=False))
     return 0
 
 
