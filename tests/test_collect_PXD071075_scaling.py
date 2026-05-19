@@ -45,3 +45,37 @@ def test_discover_points_skips_dirs_without_metadata(tmp_path):
 
     points = agg.discover_points(tmp_path)
     assert [p["point_id"] for p in points] == ["valid_point"]
+
+
+def test_parse_nextflow_trace_counts_status():
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    summary = agg.parse_nextflow_trace(trace)
+    assert summary["tasks_submitted"] == 5
+    assert summary["tasks_succeeded"] == 4
+    assert summary["tasks_failed"] == 1
+
+
+def test_parse_nextflow_trace_peak_memory():
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    summary = agg.parse_nextflow_trace(trace)
+    # Peak across all rows: 24.2 GB from INSILICO_LIBRARY_GENERATION
+    assert summary["peak_mem_gb"] == pytest.approx(24.2, abs=0.05)
+
+
+def test_parse_nextflow_trace_total_realtime():
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    summary = agg.parse_nextflow_trace(trace)
+    # Sum of realtime: 9:30 + 2:50 + 3:20 + 14:40 + 1:50 = 32:10
+    # = 570 + 170 + 200 + 880 + 110 = 1930 seconds
+    assert summary["total_cpu_s"] == 1930
+
+
+def test_parse_nextflow_trace_handles_missing_file(tmp_path):
+    summary = agg.parse_nextflow_trace(tmp_path / "nope.txt")
+    assert summary == {
+        "tasks_submitted": 0,
+        "tasks_succeeded": 0,
+        "tasks_failed": 0,
+        "peak_mem_gb": 0.0,
+        "total_cpu_s": 0,
+    }

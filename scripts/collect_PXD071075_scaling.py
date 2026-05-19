@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -62,6 +63,94 @@ def discover_points(base_results: Path) -> list[dict]:
             }
         )
     return points
+
+
+_DURATION_RE = re.compile(r"(?:(\d+)d)?\s*(?:(\d+)h)?\s*(?:(\d+)min)?\s*(?:(\d+(?:\.\d+)?)s)?")
+_MEMORY_RE = re.compile(r"^([\d.]+)\s*(KB|MB|GB|TB)$", re.IGNORECASE)
+
+
+def _parse_duration_to_seconds(text: str) -> float:
+    """Parse a Nextflow duration string like '14min 40s' or '1h 30min'."""
+    text = (text or "").strip()
+    if not text or text == "-":
+        return 0.0
+    match = _DURATION_RE.fullmatch(text)
+    if not match or not any(match.groups()):
+        return 0.0
+    days, hours, minutes, seconds = match.groups(default="0")
+    return (
+        int(days) * 86400
+        + int(hours) * 3600
+        + int(minutes) * 60
+        + float(seconds or 0)
+    )
+
+
+def _parse_memory_to_gb(text: str) -> float:
+    """Parse '24.2 GB' / '512 MB' / '-' to GB float."""
+    text = (text or "").strip()
+    if not text or text == "-":
+        return 0.0
+    match = _MEMORY_RE.match(text)
+    if not match:
+        return 0.0
+    value, unit = float(match.group(1)), match.group(2).upper()
+    return {
+        "KB": value / 1024 / 1024,
+        "MB": value / 1024,
+        "GB": value,
+        "TB": value * 1024,
+    }[unit]
+
+
+def parse_nextflow_trace(trace_path: Path) -> dict:
+    """Summarise a Nextflow trace.txt file.
+
+    Returns counts + aggregates suitable for one row of timings.csv.
+    Missing file gives zero counters (lets us run mid-sweep).
+    """
+    empty = {
+        "tasks_submitted": 0,
+        "tasks_succeeded": 0,
+        "tasks_failed": 0,
+        "peak_mem_gb": 0.0,
+        "total_cpu_s": 0,
+    }
+    if not trace_path.is_file():
+        return empty
+
+    with trace_path.open() as fh:
+        header_line = fh.readline().rstrip("\n")
+        if not header_line:
+            return empty
+        header = header_line.split("\t")
+        col = {name: i for i, name in enumerate(header)}
+
+        submitted = succeeded = failed = 0
+        peak_mem = 0.0
+        total_realtime = 0.0
+
+        for raw in fh:
+            row = raw.rstrip("\n").split("\t")
+            if len(row) < len(header):
+                continue
+            submitted += 1
+            status = row[col.get("status", -1)] if "status" in col else ""
+            if status == "COMPLETED":
+                succeeded += 1
+            elif status == "FAILED":
+                failed += 1
+            mem = _parse_memory_to_gb(row[col["peak_rss"]]) if "peak_rss" in col else 0.0
+            peak_mem = max(peak_mem, mem)
+            total_realtime += _parse_duration_to_seconds(row[col["realtime"]]) if "realtime" in col else 0
+
+    return {
+        "tasks_submitted": submitted,
+        "tasks_succeeded": succeeded,
+        "tasks_failed": failed,
+        "peak_mem_gb": round(peak_mem, 2),
+        "total_cpu_s": int(round(total_realtime)),
+    }
 
 
 def main(argv: Iterable[str] | None = None) -> int:
