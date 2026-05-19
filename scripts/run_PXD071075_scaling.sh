@@ -75,13 +75,13 @@ fi
 mkdir -p "$BASE_RESULTS" "$BASE_WORK" "$LOGS_DIR" "$NXF_SINGULARITY_CACHEDIR"
 
 # --- Read sweep matrix ---------------------------------------------------
-# Columns: point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours
+# Columns: point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours raw_dir_override
 ROWS=()
-while IFS=$'\t' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours; do
+while IFS=$'\t' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours raw_dir_override; do
     # Skip header
     [ "$point_id" = "point_id" ] && continue
     [ -z "$point_id" ] && continue
-    ROWS+=("$point_id|$version|$run_kind|$cluster_cores|$queue_size|$per_job_mem_gb|$head_mem_gb|$cpus_per_task|$time_limit_hours")
+    ROWS+=("$point_id|$version|$run_kind|$cluster_cores|$queue_size|$per_job_mem_gb|$head_mem_gb|$cpus_per_task|$time_limit_hours|$raw_dir_override")
 done < "$MATRIX"
 
 if [ "${#ROWS[@]}" -eq 0 ]; then
@@ -102,7 +102,7 @@ echo
 # --- Plan ----------------------------------------------------------------
 echo "Planning ${#ROWS[@]} sbatch submissions:"
 for row in "${ROWS[@]}"; do
-    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours <<<"$row"
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours raw_dir_override <<<"$row"
     printf "  - %-30s v%-6s kind=%-8s cores=%-3s queue=%-3s mem=%sGB cpus=%s time=%sh\n" \
         "$point_id" "$version" "$run_kind" "$cluster_cores" "$queue_size" \
         "$([ "$per_job_mem_gb" = "0" ] && echo "$head_mem_gb" || echo "$per_job_mem_gb")" \
@@ -134,11 +134,15 @@ EOF
 # Using a nameref (declare -n) keeps array elements properly quoted and
 # avoids the eval-on-string pitfalls of the previous design. Mirrors the
 # sibling proteobench_diann_versions.sh pattern.
+#
+# $14 = effective_raw_dir: the resolved raw (or mzML) directory to pass to
+# run_diann.sh / run_local.sh. Computed by the caller from raw_dir_override.
 build_cmd_into() {
     local -n out_arr=$1
     local point_id="$2" version="$3" run_kind="$4" cluster_cores="$5"
     local queue_size="$6" per_job_mem_gb="$7" head_mem_gb="$8" cpus_per_task="$9"
     local results_dir="${10}" log_dir="${11}" prev_jid="${12}" time_limit_hours="${13}"
+    local effective_raw_dir="${14}"
 
     local out_file="$log_dir/slurm_%j.out"
     local err_file="$log_dir/slurm_%j.err"
@@ -157,7 +161,7 @@ build_cmd_into() {
             --time="${time_limit_hours}:00:00"
             --export="ALL,NXF_SINGULARITY_CACHEDIR=$NXF_SINGULARITY_CACHEDIR"
             "$SCRIPT_DIR/run_diann.sh"
-            "$RAW_DIR" "$FASTA" "$results_dir" "$version"
+            "$effective_raw_dir" "$FASTA" "$results_dir" "$version"
         )
     else
         local work_dir="$BASE_WORK/$point_id"
@@ -168,7 +172,7 @@ build_cmd_into() {
             --time="${time_limit_hours}:00:00"
             --export="ALL,QUEUE_SIZE=$queue_size,SWEEP_CORES=$cluster_cores"
             "$SCRIPT_DIR/run_local.sh"
-            "$SDRF" "$RAW_DIR" "$FASTA" "$work_dir" "$results_dir" "$version"
+            "$SDRF" "$effective_raw_dir" "$FASTA" "$work_dir" "$results_dir" "$version"
         )
     fi
 }
@@ -178,7 +182,22 @@ SUBMITTED_IDS=()
 idx=0
 prev_jid=""
 for row in "${ROWS[@]}"; do
-    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours <<<"$row"
+    IFS='|' read -r point_id version run_kind cluster_cores queue_size per_job_mem_gb head_mem_gb cpus_per_task time_limit_hours raw_dir_override <<<"$row"
+
+    # Resolve effective raw dir: honour per-row override when set and not "-".
+    local_raw_dir="$RAW_DIR"
+    if [ "$raw_dir_override" != "-" ] && [ -n "$raw_dir_override" ]; then
+        local_raw_dir="$raw_dir_override"
+    fi
+
+    # Warn (don't abort) when the override path doesn't exist yet so DRY_RUN
+    # still works before the one-time conversion job has run.
+    if [ "$raw_dir_override" != "-" ] && [ -n "$raw_dir_override" ]; then
+        if [ ! -d "$raw_dir_override" ]; then
+            echo "WARN: raw_dir_override for $point_id does not exist yet: $raw_dir_override" >&2
+            echo "      (run scripts/convert_PXD071075_raw_to_mzml.sh first)" >&2
+        fi
+    fi
 
     results_dir="$BASE_RESULTS/$point_id"
     log_dir="$LOGS_DIR/$point_id"
@@ -188,7 +207,8 @@ for row in "${ROWS[@]}"; do
     build_cmd_into CMD_ARGS \
         "$point_id" "$version" "$run_kind" "$cluster_cores" \
         "$queue_size" "$per_job_mem_gb" "$head_mem_gb" "$cpus_per_task" \
-        "$results_dir" "$log_dir" "$prev_jid" "$time_limit_hours"
+        "$results_dir" "$log_dir" "$prev_jid" "$time_limit_hours" \
+        "$local_raw_dir"
 
     if [ "$DRY_RUN" = "1" ]; then
         printf '[dry-run idx=%d%s] %s\n' "$idx" "${prev_jid:+ depends-on=$prev_jid}" "${CMD_ARGS[*]}"

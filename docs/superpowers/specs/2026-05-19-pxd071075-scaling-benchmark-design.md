@@ -20,9 +20,9 @@ stage.
 ## Goals
 
 1. **Single-node baseline** run of direct DIA-NN (no Nextflow) on one fat
-   node — 48 cpu, 300 GB RAM, Singularity — for DIA-NN **v2.5.0** only.
-   (v1.8.1 is excluded: its bundled Thermo reader rejects the 2024 Orbitrap
-   Eclipse `.raw` files — see note in the Sweep matrix section below.)
+   node — 48 cpu, 300 GB RAM, Singularity — for **both DIA-NN v1.8.1 and
+   v2.5.0**. The v1.8.1 baseline reads pre-converted `.mzML` files (see note
+   in the Sweep matrix section below).
 2. **Cluster scaling sweep** of the full quantmsdiann pipeline through
    Nextflow + SLURM (`pride_slurm` profile) at **{10, 20, 50, 100, 200} total
    in-flight cluster cores**, **v2.5.0 only**, Singularity.
@@ -33,7 +33,7 @@ stage.
 
 ## Non-goals
 
-- Comparing DIA-NN versions across the scaling sweep (only v2.5.0 is swept).
+- Comparing DIA-NN versions across the scaling sweep (only v2.5.0 is swept; the v1.8.1 baseline is a single-node quality check only).
 - Per-task cpu-sizing sweeps (cpus per Nextflow task stay at pipeline defaults).
 - Multi-node-allocation experiments (no SLURM heterogeneous jobs, no MPI).
 - Cross-dataset scaling (Module 9 PXD049412 etc. is a future extension; the
@@ -62,7 +62,7 @@ stage.
 |---|---|---|
 | Benchmark description | `benchmarks/dia/OrbitrapEclipse/PXD071075/DESCRIPTION.md` | Sample/protocol summary, sweep matrix, links to result paths on cluster |
 | Sweep matrix | `benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv` | Source-of-truth table (version, run_kind, cluster_cores, queue_size, mem, dependency) consumed by the submitter and the aggregator |
-| Submitter | `scripts/run_PXD071075_scaling.sh` | Top-level SLURM submitter for the 6-point sweep (1 baseline + 5 scaling) |
+| Submitter | `scripts/run_PXD071075_scaling.sh` | Top-level SLURM submitter for the 7-point sweep (2 baselines + 5 scaling) |
 | Aggregator | `scripts/collect_PXD071075_scaling.py` | Walks per-point result directories on cluster, builds `timings.csv` + plots |
 
 ### Run_local.sh extension
@@ -168,19 +168,25 @@ quantms-test-datasets/
 
 `benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv`:
 
-> **Note on DIA-NN 1.8.1:** earlier drafts of this benchmark included a v1.8.1 baseline.
-> DIA-NN 1.8.1's bundled Thermo reader rejects the 2024 Orbitrap Eclipse `.raw` files
-> ("Thermo RAW file format not supported"), so the cross-version comparison is not
-> possible on this dataset. The scaling sweep stays v2.5.0-only.
+> **Note on DIA-NN 1.8.1:** DIA-NN 1.8.1's bundled ThermoRawFileReader rejects
+> the 2024 Orbitrap Eclipse `.raw` format. To keep the cross-version baseline
+> meaningful, the v1.8.1 baseline reads pre-converted `.mzML` files produced by
+> `scripts/convert_PXD071075_raw_to_mzml.sh` (ThermoRawFileParser, Singularity).
+> The `raw_dir_override` column in the sweep matrix points the submitter to the
+> mzML directory for that row. DIA-NN 2.5.0 and the Nextflow sweep read `.raw`
+> directly. **Format-asymmetry caveat:** I/O timing is not directly comparable
+> across v1.8.1 (mzML) and v2.5.0 (raw) baselines; the comparison is meaningful
+> for *identification quality* only.
 
-| version | run_kind | cluster_cores | queue_size | head_mem | per_job_mem | sdrf_samples |
-|---------|----------|---------------|------------|----------|-------------|--------------|
-| 2.5.0   | baseline | 48            | n/a        | n/a      | 300 GB      | 2310 |
-| 2.5.0   | sweep    | 10            | 2          | 8 GB     | pipeline default | 2310 |
-| 2.5.0   | sweep    | 20            | 3          | 8 GB     | pipeline default | 2310 |
-| 2.5.0   | sweep    | 50            | 7          | 8 GB     | pipeline default | 2310 |
-| 2.5.0   | sweep    | 100           | 13         | 8 GB     | pipeline default | 2310 |
-| 2.5.0   | sweep    | 200           | 25         | 8 GB     | pipeline default | 2310 |
+| version | run_kind | cluster_cores | queue_size | head_mem | per_job_mem | raw_dir_override | sdrf_samples |
+|---------|----------|---------------|------------|----------|-------------|-----------------|--------------|
+| 1.8.1   | baseline | 48            | n/a        | n/a      | 300 GB      | PXD071075-mzml  | 2310 |
+| 2.5.0   | baseline | 48            | n/a        | n/a      | 300 GB      | -               | 2310 |
+| 2.5.0   | sweep    | 10            | 2          | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 20            | 3          | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 50            | 7          | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 100           | 13         | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 200           | 25         | 8 GB     | pipeline default | -            | 2310 |
 
 **queueSize formula:** `ceil(cluster_cores / 8)` where 8 is the cpu count of
 the dominant per-file analysis step (`process_medium` in nf-core quantmsdiann).
@@ -205,18 +211,19 @@ Reasoning:
 Order:
 
 ```
-v2_5_0_baseline_48cpu
-  └─→ v2_5_0_sweep_010cores
-        └─→ v2_5_0_sweep_020cores
-              └─→ v2_5_0_sweep_050cores
-                    └─→ v2_5_0_sweep_100cores
-                          └─→ v2_5_0_sweep_200cores
+v1_8_1_baseline_48cpu
+  └─→ v2_5_0_baseline_48cpu
+        └─→ v2_5_0_sweep_010cores
+              └─→ v2_5_0_sweep_020cores
+                    └─→ v2_5_0_sweep_050cores
+                          └─→ v2_5_0_sweep_100cores
+                                └─→ v2_5_0_sweep_200cores
 ```
 
 Total estimated wall-time (rough, for capacity planning):
-- Baseline: 1 × ~12h ≈ 12h
+- Baselines: 2 × ~12h ≈ 24h
 - Sweep: 200-core ~8h, 100-core ~16h, 50-core ~32h, 20-core ~80h, 10-core ~160h
-- **Total: ~13 days** end-to-end if every point succeeds first try.
+- **Total: ~14 days** end-to-end if every point succeeds first try.
 
 This is intentional: the 10-core point is the most informative for showing
 where parallel efficiency starts to flatten, and skipping it would lose the
@@ -234,7 +241,7 @@ Mirrors the style of [scripts/proteobench_diann_versions.sh](../../../scripts/pr
    `proteobench_diann_versions.sh`.
 3. **Reads sweep matrix from** `benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv`
    (so adjusting the sweep is a data change, not a code change).
-4. **Per-row sbatch invocation** (6 rows: 1 baseline + 5 sweep):
+4. **Per-row sbatch invocation** (7 rows: 2 baselines + 5 sweep):
    - For `run_kind=baseline`: `sbatch --mem=300G --cpus-per-task=48 --time=72:00:00 scripts/run_diann.sh <RAW_DIR> <FASTA> <RESULTS> <VERSION>`
    - For `run_kind=sweep`: `sbatch --export=ALL,QUEUE_SIZE=<N>,SWEEP_CORES=<C> scripts/run_local.sh <SDRF> <RAW_DIR> <FASTA> <WORK> <RESULTS> 2_5_0`
 5. **Sequential dependency**: each submission after the first adds

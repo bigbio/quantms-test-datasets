@@ -1,7 +1,8 @@
-point_id	version	run_kind	cluster_cores	queue_size	per_job_mem_gb	head_mem_gb	cpus_per_task	time_limit_hours
-v2_5_0_baseline_48cpu	2_5_0	baseline	48	0	300	0	48	72
-v2_5_0_sweep_010cores	2_5_0	sweep	10	2	0	8	2	240
-v2_5_0_sweep_020cores	2_5_0	sweep	20	3	0	8	2	168
-v2_5_0_sweep_050cores	2_5_0	sweep	50	7	0	8	2	96
-v2_5_0_sweep_100cores	2_5_0	sweep	100	13	0	8	2	72
-v2_5_0_sweep_200cores	2_5_0	sweep	200	25	0	8	2	48
+point_id	version	run_kind	cluster_cores	queue_size	per_job_mem_gb	head_mem_gb	cpus_per_task	time_limit_hours	raw_dir_override
+v1_8_1_baseline_48cpu	1_8_1	baseline	48	0	300	0	48	72	/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075-mzml
+v2_5_0_baseline_48cpu	2_5_0	baseline	48	0	300	0	48	72	-
+v2_5_0_sweep_010cores	2_5_0	sweep	10	2	0	8	2	240	-
+v2_5_0_sweep_020cores	2_5_0	sweep	20	3	0	8	2	168	-
+v2_5_0_sweep_050cores	2_5_0	sweep	50	7	0	8	2	96	-
+v2_5_0_sweep_100cores	2_5_0	sweep	100	13	0	8	2	72	-
+v2_5_0_sweep_200cores	2_5_0	sweep	200	25	0	8	2	48	-
