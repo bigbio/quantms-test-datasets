@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Iterable
@@ -151,6 +152,89 @@ def parse_nextflow_trace(trace_path: Path) -> dict:
         "peak_mem_gb": round(peak_mem, 2),
         "total_cpu_s": int(round(total_realtime)),
     }
+
+
+_HMS_RE = re.compile(r"^(?:(\d+)-)?(\d+):(\d+):(\d+)(?:\.\d+)?$")
+
+
+def _hms_to_seconds(text: str) -> int:
+    """SLURM HH:MM:SS or D-HH:MM:SS to seconds."""
+    text = (text or "").strip()
+    if not text:
+        return 0
+    match = _HMS_RE.match(text)
+    if not match:
+        return 0
+    days, h, m, s = match.groups(default="0")
+    return int(days or 0) * 86400 + int(h) * 3600 + int(m) * 60 + int(s)
+
+
+def _rss_to_gb(text: str) -> float:
+    """SLURM MaxRSS like '8388608K' / '8G' / '' to GB."""
+    text = (text or "").strip()
+    if not text:
+        return 0.0
+    unit = text[-1].upper()
+    try:
+        value = float(text[:-1] if unit in "KMGT" else text)
+    except ValueError:
+        return 0.0
+    return {
+        "K": value / (1024 * 1024),
+        "M": value / 1024,
+        "G": value,
+        "T": value * 1024,
+    }.get(unit, value / (1024 * 1024 * 1024))  # bytes fallback
+
+
+def parse_sacct_output(stdout: str) -> dict:
+    """Parse `sacct --parsable2 --format=Elapsed,CPUTime,MaxRSS` output.
+
+    Picks the maximum (Elapsed, CPUTime) across rows and the max MaxRSS,
+    because sacct reports parent + step rows and the step rows carry MaxRSS.
+    """
+    walltime = cputime = 0
+    maxrss = 0.0
+    lines = [ln for ln in stdout.splitlines() if ln.strip()]
+    if len(lines) < 2:
+        return {"slurm_walltime_s": 0, "slurm_cputime_s": 0, "slurm_maxrss_gb": 0.0}
+
+    header = lines[0].split("|")
+    col = {name: i for i, name in enumerate(header)}
+    for row_text in lines[1:]:
+        row = row_text.split("|")
+        if "Elapsed" in col and col["Elapsed"] < len(row):
+            walltime = max(walltime, _hms_to_seconds(row[col["Elapsed"]]))
+        if "CPUTime" in col and col["CPUTime"] < len(row):
+            cputime = max(cputime, _hms_to_seconds(row[col["CPUTime"]]))
+        if "MaxRSS" in col and col["MaxRSS"] < len(row):
+            maxrss = max(maxrss, _rss_to_gb(row[col["MaxRSS"]]))
+
+    return {
+        "slurm_walltime_s": walltime,
+        "slurm_cputime_s": cputime,
+        "slurm_maxrss_gb": round(maxrss, 2),
+    }
+
+
+def run_sacct(job_id: str) -> dict:
+    """Invoke sacct for one job id and return parsed metrics.
+
+    Returns zeros if sacct isn't available or the job isn't in accounting
+    (lets the aggregator run off-cluster for fixture-based testing).
+    """
+    try:
+        result = subprocess.run(
+            ["sacct", "-j", str(job_id), "--format=Elapsed,CPUTime,MaxRSS", "--parsable2"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return {"slurm_walltime_s": 0, "slurm_cputime_s": 0, "slurm_maxrss_gb": 0.0}
+    if result.returncode != 0:
+        return {"slurm_walltime_s": 0, "slurm_cputime_s": 0, "slurm_maxrss_gb": 0.0}
+    return parse_sacct_output(result.stdout)
 
 
 def main(argv: Iterable[str] | None = None) -> int:

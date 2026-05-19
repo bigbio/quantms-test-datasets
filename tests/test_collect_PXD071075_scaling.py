@@ -79,3 +79,59 @@ def test_parse_nextflow_trace_handles_missing_file(tmp_path):
         "peak_mem_gb": 0.0,
         "total_cpu_s": 0,
     }
+
+
+from unittest.mock import patch
+import subprocess
+
+
+SACCT_OK = """Elapsed|CPUTime|MaxRSS
+01:23:45|01:23:45|
+01:23:45|01:23:45|8388608K
+"""
+
+SACCT_EMPTY = """Elapsed|CPUTime|MaxRSS
+"""
+
+
+def test_parse_sacct_elapsed_to_seconds():
+    summary = agg.parse_sacct_output(SACCT_OK)
+    # 1h 23min 45s = 3600 + 1380 + 45 = 5025
+    assert summary["slurm_walltime_s"] == 5025
+    assert summary["slurm_cputime_s"] == 5025
+
+
+def test_parse_sacct_extracts_maxrss():
+    summary = agg.parse_sacct_output(SACCT_OK)
+    # MaxRSS 8388608K = 8 GiB ~ 8.0 GB
+    assert summary["slurm_maxrss_gb"] == pytest.approx(8.0, abs=0.05)
+
+
+def test_parse_sacct_handles_empty():
+    summary = agg.parse_sacct_output(SACCT_EMPTY)
+    assert summary == {
+        "slurm_walltime_s": 0,
+        "slurm_cputime_s": 0,
+        "slurm_maxrss_gb": 0.0,
+    }
+
+
+def test_run_sacct_invokes_sacct_command():
+    expected_argv = ["sacct", "-j", "12345", "--format=Elapsed,CPUTime,MaxRSS", "--parsable2"]
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=expected_argv, returncode=0, stdout=SACCT_OK, stderr=""
+        )
+        result = agg.run_sacct("12345")
+    mock_run.assert_called_once_with(expected_argv, capture_output=True, text=True, check=False)
+    assert result["slurm_walltime_s"] == 5025
+
+
+def test_run_sacct_returns_zeros_when_sacct_missing():
+    with patch("subprocess.run", side_effect=FileNotFoundError):
+        result = agg.run_sacct("12345")
+    assert result == {
+        "slurm_walltime_s": 0,
+        "slurm_cputime_s": 0,
+        "slurm_maxrss_gb": 0.0,
+    }
