@@ -176,7 +176,12 @@ run_singularity() {
         image_arg="docker://$DIANN_IMAGE"
     fi
     mapfile -t args < <(substitute "$raw" "$fasta/$FASTA_NAME" "$out")
+    # Force a locale the container's libc actually has installed.
+    # Host typically sets LANG=en_US.UTF-8, which most slim DIA-NN
+    # containers don't ship -> std::locale throws on construction.
     singularity exec \
+        --env LC_ALL=C.UTF-8 \
+        --env LANG=C.UTF-8 \
         --bind "$RAW_DIR":"$raw":ro \
         --bind "$FASTA_HOST_DIR":"$fasta":ro \
         --bind "$OUTPUT_DIR":"$out" \
