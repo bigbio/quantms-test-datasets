@@ -86,7 +86,7 @@ The runner also writes `$RESULTS_DIR/run_metadata.json` with:
   "dataset": "PXD071075",
   "diann_version": "2_5_0",
   "sweep_cores": 100,
-  "queue_size": 13,
+  "queue_size": 100,
   "slurm_job_id": "12345",
   "slurm_submit_dir": "...",
   "started_at_utc": "2026-05-19T18:30:00Z"
@@ -182,20 +182,17 @@ quantms-test-datasets/
 |---------|----------|---------------|------------|----------|-------------|-----------------|--------------|
 | 1.8.1   | baseline | 48            | n/a        | n/a      | 300 GB      | PXD071075-mzml  | 2310 |
 | 2.5.0   | baseline | 48            | n/a        | n/a      | 300 GB      | -               | 2310 |
-| 2.5.0   | sweep    | 10            | 2          | 8 GB     | pipeline default | -            | 2310 |
-| 2.5.0   | sweep    | 20            | 3          | 8 GB     | pipeline default | -            | 2310 |
-| 2.5.0   | sweep    | 50            | 7          | 8 GB     | pipeline default | -            | 2310 |
-| 2.5.0   | sweep    | 100           | 13         | 8 GB     | pipeline default | -            | 2310 |
-| 2.5.0   | sweep    | 200           | 25         | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 10            | 10         | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 20            | 20         | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 50            | 50         | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 100           | 100        | 8 GB     | pipeline default | -            | 2310 |
+| 2.5.0   | sweep    | 200           | 200        | 8 GB     | pipeline default | -            | 2310 |
 
-**queueSize formula:** `ceil(cluster_cores / 8)` where 8 is the cpu count of
-the dominant per-file analysis step (`process_medium` in nf-core quantmsdiann).
-This is an **approximation** — other steps (`process_low`, `process_high`)
-share the queue and have different cpu sizings, so actual in-flight core count
-will drift around the target. The mapping is documented in DESCRIPTION.md so
-users can interpret the resulting numbers correctly. If a more precise mapping
-becomes important, the future refinement is to pin per-process cpus in
-`extra.config` (out of scope for v1).
+**Interpretation of "cluster cores"**: `queue_size` IS the cluster's effective
+parallel slot count — max concurrent Nextflow tasks dispatched to SLURM at any
+one time. `cluster_cores == queue_size` by definition in this sweep. Real
+in-flight CPU usage is `queue_size × avg(cpus_per_task)` and depends on which
+`process_*` labels are active at a given moment.
 
 ## Dependency chain
 
@@ -222,14 +219,16 @@ v1_8_1_baseline_48cpu
 
 Total estimated wall-time (rough, for capacity planning):
 - Baselines: 2 × ~12h ≈ 24h
-- Sweep: 200-core ~8h, 100-core ~16h, 50-core ~32h, 20-core ~80h, 10-core ~160h
-- **Total: ~14 days** end-to-end if every point succeeds first try.
+- Sweep: QUEUE_SIZE=200 ~30 min, QUEUE_SIZE=100 ~1h, QUEUE_SIZE=50 ~2h, QUEUE_SIZE=20 ~5h, QUEUE_SIZE=10 ~10h
+- **Total sweep chain: ~19h; total including baselines: ~3 days** end-to-end if every point succeeds first try.
 
-This is intentional: the 10-core point is the most informative for showing
-where parallel efficiency starts to flatten, and skipping it would lose the
-left tail of the curve. If runtime becomes a concern in practice, the easy
-escape is `DRY_RUN=1` to preview the plan, then a manual `sbatch --dependency=`
-chain that excludes the slowest points.
+The `time_limit_hours` values (240/168/96/72/48 h) are generous upper bounds —
+over-provisioning SLURM `--time` is harmless and avoids babysitting. The
+10-core point is the most informative for showing where parallel efficiency
+starts to flatten, and skipping it would lose the left tail of the curve. If
+runtime becomes a concern in practice, the easy escape is `DRY_RUN=1` to
+preview the plan, then a manual `sbatch --dependency=` chain that excludes the
+slowest points.
 
 ## Submitter (`scripts/run_PXD071075_scaling.sh`)
 

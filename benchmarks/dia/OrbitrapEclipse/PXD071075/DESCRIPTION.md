@@ -58,16 +58,22 @@ This benchmark also drives a 7-point scaling sweep documented in
 |---|---|---|---|---|---|
 | `v1_8_1_baseline_48cpu` | 1.8.1 | baseline | 48 | n/a | Single fat node, 300 GB, direct DIA-NN, reads mzML |
 | `v2_5_0_baseline_48cpu` | 2.5.0 | baseline | 48 | n/a | Single fat node, 300 GB, direct DIA-NN, reads mzML |
-| `v2_5_0_sweep_010cores` | 2.5.0 | sweep | 10 | 2 | Nextflow `pride_slurm`, queueSize = ceil(10/8) |
-| `v2_5_0_sweep_020cores` | 2.5.0 | sweep | 20 | 3 | Nextflow `pride_slurm`, queueSize = ceil(20/8) |
-| `v2_5_0_sweep_050cores` | 2.5.0 | sweep | 50 | 7 | Nextflow `pride_slurm`, queueSize = ceil(50/8) |
-| `v2_5_0_sweep_100cores` | 2.5.0 | sweep | 100 | 13 | Nextflow `pride_slurm`, queueSize = ceil(100/8) |
-| `v2_5_0_sweep_200cores` | 2.5.0 | sweep | 200 | 25 | Nextflow `pride_slurm`, queueSize = ceil(200/8) |
+| `v2_5_0_sweep_010cores` | 2.5.0 | sweep | 10 | 10 | Nextflow `pride_slurm`, queueSize = cluster_cores |
+| `v2_5_0_sweep_020cores` | 2.5.0 | sweep | 20 | 20 | Nextflow `pride_slurm`, queueSize = cluster_cores |
+| `v2_5_0_sweep_050cores` | 2.5.0 | sweep | 50 | 50 | Nextflow `pride_slurm`, queueSize = cluster_cores |
+| `v2_5_0_sweep_100cores` | 2.5.0 | sweep | 100 | 100 | Nextflow `pride_slurm`, queueSize = cluster_cores |
+| `v2_5_0_sweep_200cores` | 2.5.0 | sweep | 200 | 200 | Nextflow `pride_slurm`, queueSize = cluster_cores |
 
-**queueSize formula** is `ceil(cluster_cores / 8)` where 8 ≈ cpus of the
-dominant `process_medium` step in nf-core quantmsdiann. The total in-flight
-core count is approximate — other `process_*` labels share the queue with
-different sizings.
+**Interpretation of "cluster cores"**: in this benchmark, the `cluster_cores`
+column equals `queueSize` (max concurrent Nextflow tasks dispatched to SLURM
+at any one time). It's the cluster's *effective parallel slot count* as far as
+this run is concerned, not the multiplication-by-cpu-per-task figure. Real
+in-flight CPU usage is `queueSize × avg(cpus_per_task)` and depends on which
+`process_*` labels are active at a given moment.
+
+The `time_limit_hours` values in `sweep_matrix.tsv` (240/168/96/72/48 h) are
+generous upper bounds — over-provisioning the SLURM `--time` is harmless and
+avoids babysitting the queue.
 
 ### How to run
 

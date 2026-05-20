@@ -10,7 +10,7 @@
 #
 # Submit the PXD071075 cluster-scaling sweep:
 #   - 2 baseline points (DIA-NN direct via run_diann.sh) @ 48 cpu / 300 GB
-#   - 5 sweep points (Nextflow via run_local.sh) @ queueSize in {2,3,7,13,25}
+#   - 5 sweep points (Nextflow via run_local.sh) @ queueSize in {10,20,50,100,200}
 # Chained sequentially with --dependency=afterok so wall-times are measured
 # against a quiescent cluster.
 #
