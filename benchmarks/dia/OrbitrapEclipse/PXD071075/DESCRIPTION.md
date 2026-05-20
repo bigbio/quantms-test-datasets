@@ -90,6 +90,23 @@ DRY_RUN=1 ./scripts/run_PXD071075_scaling.sh
 ./scripts/collect_PXD071075_scaling.py
 ```
 
+For running a single sweep point at a specific QUEUE_SIZE (handy for
+ad-hoc cluster-size experiments without editing `sweep_matrix.tsv`):
+
+```bash
+# QUEUE_SIZE=30, default time limit 72h
+/hps/nobackup/juan/pride/reanalysis/scripts/submit_PXD071075_sweep.sh 30
+
+# QUEUE_SIZE=100, custom 12h time limit
+/hps/nobackup/juan/pride/reanalysis/scripts/submit_PXD071075_sweep.sh 100 12
+
+# Preview the sbatch line, don't submit
+DRY_RUN=1 /hps/nobackup/juan/pride/reanalysis/scripts/submit_PXD071075_sweep.sh 50
+```
+
+Each invocation creates `<BASE_RESULTS>/v2_5_0_sweep_<NNN>cores/`,
+writes `run_metadata.json`, and the aggregator picks it up automatically.
+
 Result paths:
 - Per-point: `/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075/<point_id>/`
   - Nextflow reports: `<point_id>/pipeline_info/` (`nextflow_report.html`, `nextflow_timeline.html`, `nextflow_trace.txt`)
