@@ -48,7 +48,9 @@ else
 fi
 
 # --- Paths (cluster defaults) -------------------------------------------
-RAW_DIR="${RAW_DIR:-/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075}"
+# All points read mzML (1.8.1's Thermo reader can't handle the 2024 .raw files;
+# 2.5.0 + sweep use the same mzML for I/O parity across versions).
+RAW_DIR="${RAW_DIR:-/hps/nobackup/juan/pride/reanalysis/raw-data/benchmarks/PXD071075-mzml}"
 BASE_RESULTS="${BASE_RESULTS:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_results/PXD071075}"
 BASE_WORK="${BASE_WORK:-/hps/nobackup/juan/pride/reanalysis/quantmsdiann_work/PXD071075}"
 LOGS_DIR="${LOGS_DIR:-/hps/nobackup/juan/pride/reanalysis/logs/PXD071075}"

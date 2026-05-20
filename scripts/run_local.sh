@@ -117,6 +117,7 @@ if [ -z "${LOCAL_INPUT_TYPE:-}" ]; then
 fi
 
 mkdir -p "$WORK_DIR" "$RESULTS_DIR" "$NXF_SINGULARITY_CACHEDIR"
+mkdir -p "$RESULTS_DIR/pipeline_info"
 
 echo "===================================================================="
 echo "SLURM job      : ${SLURM_JOB_ID:-(interactive)}  node=${SLURMD_NODENAME:-N/A}"
@@ -219,9 +220,9 @@ nextflow run "$PIPELINE_DIR" \
     -profile "$PROFILES" \
     "${EXTRA_CFG_ARGS[@]}" \
     -work-dir "$WORK_DIR" \
-    -with-report   "$RESULTS_DIR/nextflow_report.html" \
-    -with-timeline "$RESULTS_DIR/nextflow_timeline.html" \
-    -with-trace    "$RESULTS_DIR/nextflow_trace.txt" \
+    -with-report   "$RESULTS_DIR/pipeline_info/nextflow_report.html" \
+    -with-timeline "$RESULTS_DIR/pipeline_info/nextflow_timeline.html" \
+    -with-trace    "$RESULTS_DIR/pipeline_info/nextflow_trace.txt" \
     --input "$SDRF_FILE" \
     --database "$FASTA_FILE" \
     --root_folder "$RAW_DIR" \

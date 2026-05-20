@@ -41,9 +41,6 @@ echo "$OUTPUT" | grep -qE -- "--mem=300G"            || { echo "FAIL: baseline m
 echo "$OUTPUT" | grep -qE -- "--cpus-per-task=48"    || { echo "FAIL: baseline missing --cpus-per-task=48"; exit 1; }
 echo "$OUTPUT" | grep -qE -- "--dependency=afterok:" || { echo "FAIL: chain missing afterok dependency"; exit 1; }
 
-# v1.8.1 baseline must use the pre-converted mzML override path
-echo "$OUTPUT" | grep -qE "1_8_1.*PXD071075-mzml" || { echo "FAIL: v1.8.1 baseline missing mzml override path"; exit 1; }
-
 # Exactly 7 sbatch invocations
 SBATCH_COUNT=$(echo "$OUTPUT" | grep -cE "^\[dry-run.*\] sbatch")
 [ "$SBATCH_COUNT" -eq 7 ] || { echo "FAIL: expected 7 sbatch lines, got $SBATCH_COUNT"; exit 1; }

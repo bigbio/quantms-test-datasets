@@ -270,7 +270,7 @@ def assemble_timings(base_results: Path) -> pd.DataFrame:
         meta = point["metadata"]
         path = point["path"]
 
-        trace_summary = parse_nextflow_trace(path / "nextflow_trace.txt")
+        trace_summary = parse_nextflow_trace(path / "pipeline_info" / "nextflow_trace.txt")
         sacct_summary = (
             run_sacct(meta["slurm_job_id"])
             if meta.get("slurm_job_id")

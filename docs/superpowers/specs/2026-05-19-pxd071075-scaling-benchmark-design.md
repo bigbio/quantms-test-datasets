@@ -21,7 +21,7 @@ stage.
 
 1. **Single-node baseline** run of direct DIA-NN (no Nextflow) on one fat
    node — 48 cpu, 300 GB RAM, Singularity — for **both DIA-NN v1.8.1 and
-   v2.5.0**. The v1.8.1 baseline reads pre-converted `.mzML` files (see note
+   v2.5.0**. Both baselines read pre-converted `.mzML` files (see note
    in the Sweep matrix section below).
 2. **Cluster scaling sweep** of the full quantmsdiann pipeline through
    Nextflow + SLURM (`pride_slurm` profile) at **{10, 20, 50, 100, 200} total
@@ -147,9 +147,10 @@ quantms-test-datasets/
     ├── v2_5_0_sweep_010cores/
     │   ├── results/                                # quantmsdiann outputs
     │   ├── nextflow.log
-    │   ├── nextflow_trace.txt
-    │   ├── nextflow_report.html
-    │   ├── nextflow_timeline.html
+    │   ├── pipeline_info/
+    │   │   ├── nextflow_report.html
+    │   │   ├── nextflow_timeline.html
+    │   │   └── nextflow_trace.txt
     │   ├── queue_size.config
     │   └── run_metadata.json
     ├── v2_5_0_sweep_020cores/
@@ -168,15 +169,14 @@ quantms-test-datasets/
 
 `benchmarks/dia/OrbitrapEclipse/PXD071075/scaling/sweep_matrix.tsv`:
 
-> **Note on DIA-NN 1.8.1:** DIA-NN 1.8.1's bundled ThermoRawFileReader rejects
-> the 2024 Orbitrap Eclipse `.raw` format. To keep the cross-version baseline
-> meaningful, the v1.8.1 baseline reads pre-converted `.mzML` files produced by
-> `scripts/convert_PXD071075_raw_to_mzml.sh` (ThermoRawFileParser, Singularity).
-> The `raw_dir_override` column in the sweep matrix points the submitter to the
-> mzML directory for that row. DIA-NN 2.5.0 and the Nextflow sweep read `.raw`
-> directly. **Format-asymmetry caveat:** I/O timing is not directly comparable
-> across v1.8.1 (mzML) and v2.5.0 (raw) baselines; the comparison is meaningful
-> for *identification quality* only.
+> **Note on input format:** DIA-NN 1.8.1's bundled Thermo reader rejects the
+> 2024 Orbitrap Eclipse `.raw` files ("Thermo RAW file format not supported").
+> To work around this and to keep I/O timings comparable across versions, all
+> points (baselines + sweep) read pre-converted `.mzML` files from
+> `.../PXD071075-mzml/`. The global `RAW_DIR` default in
+> `run_PXD071075_scaling.sh` now points to the mzML folder, and the
+> `raw_dir_override` column is set to `-` for every row (including v1.8.1).
+> Conversion is done once with `scripts/convert_raw_to_mzml.sh`.
 
 | version | run_kind | cluster_cores | queue_size | head_mem | per_job_mem | raw_dir_override | sdrf_samples |
 |---------|----------|---------------|------------|----------|-------------|-----------------|--------------|
@@ -260,7 +260,7 @@ PXD071075-specific. Generalising to multi-dataset scaling is a future task
 Pure Python (pandas + matplotlib). Inputs:
 
 - `$BASE_RESULTS/PXD071075/*/run_metadata.json` — point identity
-- `$BASE_RESULTS/PXD071075/*/nextflow_trace.txt` (sweep) or `diann.log` (baseline) — task-level timings
+- `$BASE_RESULTS/PXD071075/*/pipeline_info/nextflow_trace.txt` (sweep) or `diann.log` (baseline) — task-level timings
 - `sacct -j <head_jid> --format=Elapsed,CPUTime,MaxRSS --parsable2` — SLURM head-job wall + cpu + memory
 
 Output: `$BASE_RESULTS/PXD071075/timings.csv`:

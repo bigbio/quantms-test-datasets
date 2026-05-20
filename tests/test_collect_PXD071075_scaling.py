@@ -48,7 +48,7 @@ def test_discover_points_skips_dirs_without_metadata(tmp_path):
 
 
 def test_parse_nextflow_trace_counts_status():
-    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "pipeline_info" / "nextflow_trace.txt"
     summary = agg.parse_nextflow_trace(trace)
     assert summary["tasks_submitted"] == 5
     assert summary["tasks_succeeded"] == 4
@@ -56,14 +56,14 @@ def test_parse_nextflow_trace_counts_status():
 
 
 def test_parse_nextflow_trace_peak_memory():
-    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "pipeline_info" / "nextflow_trace.txt"
     summary = agg.parse_nextflow_trace(trace)
     # Peak across all rows: 24.2 GB from INSILICO_LIBRARY_GENERATION
     assert summary["peak_mem_gb"] == pytest.approx(24.2, abs=0.05)
 
 
 def test_parse_nextflow_trace_total_realtime():
-    trace = FIXTURES / "v2_5_0_sweep_050cores" / "nextflow_trace.txt"
+    trace = FIXTURES / "v2_5_0_sweep_050cores" / "pipeline_info" / "nextflow_trace.txt"
     summary = agg.parse_nextflow_trace(trace)
     # Sum of realtime: 9:30 + 2:50 + 3:20 + 14:40 + 1:50 = 32:10
     # = 570 + 170 + 200 + 880 + 110 = 1930 seconds
